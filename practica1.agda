@@ -108,8 +108,19 @@ indUnit c_tt tt = c_tt
 data Σ (A : Set) (B : A -> Set) : Set where
     _,_ : (a : A) -> B a -> Σ A B
 
-elimDependienteΣ : { A B : Set } { P : ? -> Set } -> 
-                ((a : A) -> ? -> ?) ->
-                (p : P) -> ?
+elimDependienteΣ : { A : Set } {B : A -> Set} { P : Σ A B -> Set } -> 
+                ((a : A) -> (b : B a) -> P (a , b)) ->
+                (p : Σ A B) -> P p
 
-elimDependienteΣ f a = ?
+elimDependienteΣ f (a , b) = f a b
+
+
+proj₁ : {A : Set} { B : A -> Set} -> Σ A B -> A
+proj₁ (a , _) = a
+
+proj₂ : {A : Set} { B : A -> Set} -> (s : Σ A B) -> B (proj₁ s)
+proj₂ (_ , b) = b
+
+
+--(Πa:A Σb:B C a b) →(Σf:A→B Πa:A C a (f a)
+-- Necesito papel y lapiz para eso...
