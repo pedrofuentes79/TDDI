@@ -122,5 +122,15 @@ proj₂ : {A : Set} { B : A -> Set} -> (s : Σ A B) -> B (proj₁ s)
 proj₂ (_ , b) = b
 
 
---(Πa:A Σb:B C a b) →(Σf:A→B Πa:A C a (f a)
--- Necesito papel y lapiz para eso...
+-- Version debil del axioma de eleccion
+-- En el lado izquierdo tengo que poner esa lambda porque quiero la funcion parcialmente aplicada
+-- "C a" no la aplica parcialmente, pero con "(λ b -> C a b)" si
+choiceDebil : {A B : Set} {C : A -> B -> Set} -> 
+              ((a : A) -> (Σ B (λ b -> C a b))) -> 
+              (Σ (A -> B) 
+                ((λ f -> ((a : A) -> C a (f a) )))
+              )
+choiceDebil g = (
+        (λ a -> proj₁ (g a)), 
+        (λ a -> proj₂ (g a) )
+    )
