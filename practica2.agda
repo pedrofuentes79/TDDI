@@ -29,7 +29,7 @@ suc a + b = suc (a + b)
 
 _*_ : ℕ → ℕ → ℕ
 zero  * _ = zero
-suc a * b = a + b * a
+suc a * b = b + a * b
 
 
 -- A.1) Demostrar que la suma es asociativa.
@@ -53,28 +53,99 @@ zeroPlus : { a : ℕ } -> zero + a ≡ a
 zeroPlus {zero} = refl
 zeroPlus {suc a} = cong suc (zeroPlus {a})
 
+plusZero : { a : ℕ } -> a ≡ a + zero
+plusZero {zero} = refl
+plusZero {suc a} = cong suc (plusZero {a})
+
 suc-comm-inverse : { a b : ℕ} -> a + suc b ≡ suc (a + b)
 suc-comm-inverse {zero} {b} = 
     begin
-        zero + suc b
+       zero + suc b
     ≡⟨ refl ⟩
-        suc b
+       suc b
     ≡⟨ zeroPlus ⟩
-        suc (zero + b)
+       suc (zero + b)
     ∎
-suc-comm-inverse {suc a} {b} = {!   !} 
-
+suc-comm-inverse {suc a} {b} = cong suc (suc-comm-inverse {a} {b})
 
 +-comm : {a b : ℕ} → a + b ≡ b + a
-+-comm = {!!}
++-comm {a} {zero} = 
+    begin
+       a + zero
+    ≡⟨ sym plusZero ⟩
+       a
+    ≡⟨ zeroPlus ⟩
+       zero + a
+    ∎
++-comm {a} {suc b} = 
+    begin
+       a + suc b 
+    ≡⟨ suc-comm-inverse ⟩
+       suc (a + b)
+    ≡⟨ suc-comm-inverse ⟩ -- aca agda me infiere alguna cosa... 
+       suc b + a
+    ∎
+
+
+*-zero-r : {a : ℕ} -> a * zero ≡ zero
+*-zero-r {zero} = refl
+*-zero-r {suc a} =
+  begin
+    suc a * zero
+  ≡⟨ refl ⟩ --def de _*_
+    zero + a * zero
+  ≡⟨ zeroPlus ⟩
+    a * zero
+  ≡⟨ *-zero-r ⟩
+    zero
+  ∎
+
+sumOfZeroProductIsZero : {a b : ℕ} -> a * zero + b * zero ≡ zero
+sumOfZeroProductIsZero {a} {b} =
+   begin
+      a * zero + b * zero
+   --qvq a*zero + b*zero ≡ zero + b*zero
+   --para esto, pruebo que aplicandole la funcion lambda esa a ambos lados de
+   -- a*zero ≡ zero
+   -- obtengo a*zero + b*zero ≡ zero + b*zero
+   -- entonces obtengo eso ultimo como resultado, que es lo que queriamos
+   ≡⟨ cong (λ x → x + b * zero) (*-zero-r {a}) ⟩
+      zero + b * zero
+   ≡⟨ zeroPlus ⟩
+      b * zero
+   ≡⟨ *-zero-r {b} ⟩
+      zero
+   ∎
 
 -- A.3) Demostrar que el producto distribuye sobre la suma (a izquierda).
 *-+-distrib-l : {a b c : ℕ} → (a + b) * c ≡ a * c + b * c
-*-+-distrib-l = {!!}
+*-+-distrib-l {a} {b} {zero} = 
+   begin
+      (a + b) * zero
+   ≡⟨ *-zero-r ⟩
+      zero
+   ≡⟨ sym sumOfZeroProductIsZero ⟩
+      a * zero + b * zero
+   ∎
+*-+-distrib-l {a} {b} {suc c} = {!   !}
+
+*-zero-add : {a : ℕ} -> zero ≡ a * zero
+*-zero-add {zero} = refl
+*-zero-add {suc a} = sym *-zero-r
 
 -- A.4) Demostrar que el producto es asociativo:
 *-assoc : {a b c : ℕ} → (a * b) * c ≡ a * (b * c)
-*-assoc = {!!}
+*-assoc {a} {b} {zero} = 
+   begin
+      (a * b) * zero
+   ≡⟨ *-zero-r ⟩
+      zero
+   ≡⟨ *-zero-add ⟩
+      a * zero
+   ≡⟨ cong (λ x -> a * x) (sym (*-zero-r {b}))⟩
+      a * (b * zero)
+   ∎ 
+*-assoc {a} {b} {suc c} = {!   !}
 
 -- A.5) Demostrar que el producto es conmutativo.
 -- Sugerencia: demostrar lemas auxiliares que prueben que:
