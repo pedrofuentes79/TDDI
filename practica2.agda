@@ -82,7 +82,9 @@ suc-comm-inverse {suc a} {b} = cong suc (suc-comm-inverse {a} {b})
        a + suc b 
     ≡⟨ suc-comm-inverse ⟩
        suc (a + b)
-    ≡⟨ suc-comm-inverse ⟩ -- aca agda me infiere alguna cosa... 
+    ≡⟨ cong suc (+-comm {a} {b}) ⟩
+       suc (b + a)
+    ≡⟨ refl ⟩ 
        suc b + a
     ∎
 
@@ -96,7 +98,7 @@ suc-comm-inverse {suc a} {b} = cong suc (suc-comm-inverse {a} {b})
     zero + a * zero
   ≡⟨ zeroPlus ⟩
     a * zero
-  ≡⟨ *-zero-r ⟩
+  ≡⟨ *-zero-r {a}⟩
     zero
   ∎
 
@@ -122,30 +124,45 @@ sumOfZeroProductIsZero {a} {b} =
 *-+-distrib-l {a} {b} {zero} = 
    begin
       (a + b) * zero
-   ≡⟨ *-zero-r ⟩
+   ≡⟨ *-zero-r {a + b}⟩
       zero
-   ≡⟨ sym sumOfZeroProductIsZero ⟩
+   ≡⟨ sym (sumOfZeroProductIsZero {a} {b})⟩
       a * zero + b * zero
    ∎
 *-+-distrib-l {a} {b} {suc c} = {!   !}
 
 *-zero-add : {a : ℕ} -> zero ≡ a * zero
 *-zero-add {zero} = refl
-*-zero-add {suc a} = sym *-zero-r
+*-zero-add {suc a} = sym (*-zero-r {a})
+
+*-suc-r : {a b : ℕ} -> a + a * b ≡ a * suc b
+*-suc-r {a} {b} = {!   !}
+
 
 -- A.4) Demostrar que el producto es asociativo:
 *-assoc : {a b c : ℕ} → (a * b) * c ≡ a * (b * c)
 *-assoc {a} {b} {zero} = 
    begin
       (a * b) * zero
-   ≡⟨ *-zero-r ⟩
+   ≡⟨ *-zero-r {a * b}⟩
       zero
-   ≡⟨ *-zero-add ⟩
+   ≡⟨ *-zero-add {a}⟩
       a * zero
    ≡⟨ cong (λ x -> a * x) (sym (*-zero-r {b}))⟩
       a * (b * zero)
    ∎ 
-*-assoc {a} {b} {suc c} = {!   !}
+*-assoc {a} {b} {suc c} = 
+    begin
+       (a * b) * suc c
+    ≡⟨ {!   !}  ⟩
+       (a * b) + (a * b * c)
+    ≡⟨ cong (λ z -> (a * b) + z) (*-assoc {a} {b} {c}) ⟩ 
+       (a * b) + a * (b * c)
+    ≡⟨ cong (λ z -> a * b + a * z) (*-assoc {a} {b} {c})⟩ --Esto esta mal
+       a * (b + b * c)
+    ≡⟨ cong (λ z -> a * z) (*-suc-r {b} {c}) ⟩ 
+       a * (b * suc c)
+    ∎
 
 -- A.5) Demostrar que el producto es conmutativo.
 -- Sugerencia: demostrar lemas auxiliares que prueben que:
