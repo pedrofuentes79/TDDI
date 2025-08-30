@@ -123,41 +123,6 @@ sumOfZeroProductIsZero {a} {b} =
       zero
    ∎
 
-
--- A.3) Demostrar que el producto distribuye sobre la suma (a izquierda).
-*-+-distrib-l : {a b c : ℕ} → (a + b) * c ≡ a * c + b * c
-*-+-distrib-l {a} {b} {zero} = 
-   begin
-      (a + b) * zero
-   ≡⟨ *-zero-r {a + b}⟩
-      zero
-   ≡⟨ sym (sumOfZeroProductIsZero {a} {b})⟩
-      a * zero + b * zero
-   ∎
-*-+-distrib-l {a} {b} {suc c} = {!   !} 
--- gpt
--- begin
---    (a + b) * suc c
--- ≡⟨ sym (*-suc-r {a + b} {c}) ⟩
---    (a + b) + (a + b) * c
--- ≡⟨ cong (λ z → (a + b) + z) (*-+-distrib-l {a} {b} {c}) ⟩
---    (a + b) + (a * c + b * c)
--- ≡⟨ +-assoc {a + b} {a * c} {b * c} ⟩
---    ((a + b) + a * c) + b * c
--- ≡⟨ cong (λ z → z + b * c) (+-assoc {a} {b} {a * c}) ⟩
---    (a + (b + a * c)) + b * c
--- ≡⟨ cong (λ z → z + b * c) (cong (λ z → a + z) (+-comm {b} {a * c})) ⟩
---    (a + (a * c + b)) + b * c
--- ≡⟨ cong (λ z → z + b * c) (+-assoc {a} {a * c} {b}) ⟩
---    ((a + a * c) + b) + b * c
--- ≡⟨ +-assoc {(a + a * c)} {b} {b * c} ⟩
---    (a + a * c) + (b + b * c)
--- ≡⟨ cong (λ z → z + (b + b * c)) (*-suc-r {a} {c}) ⟩
---    (a * suc c) + (b + b * c)
--- ≡⟨ cong (λ z → (a * suc c) + z) (*-suc-r {b} {c}) ⟩
---    a * suc c + b * suc c
--- ∎
-
 *-zero-add : {a : ℕ} -> zero ≡ a * zero
 *-zero-add {zero} = refl
 *-zero-add {suc a} = sym (*-zero-r {a})
@@ -192,13 +157,12 @@ sumOfZeroProductIsZero {a} {b} =
    ≡⟨ *-zero-add-v2 {suc b}⟩
       zero * suc b 
    ∎
-
 *-suc-r {suc a} {b} = 
    begin
       suc a + suc a * b
    ≡⟨ cong (λ c -> suc a + c) refl ⟩ 
       suc a + (b + a * b)
-   ≡⟨ +-assoc ⟩ 
+   ≡⟨ sym (+-assoc {suc a} {b} {a * b}) ⟩ 
       suc a + b + a * b
    ≡⟨ cong (λ c -> c + b + a * b) (+-suc-a-is-suc-zero+a {a}) ⟩ -- suc a ≡ suc zero + a 
       suc zero + a + b + a * b
@@ -220,22 +184,44 @@ sumOfZeroProductIsZero {a} {b} =
       suc a * suc b 
    ∎
 
-
 factor-derecha : {a b c : ℕ} -> (a * b) + a * (b * c) ≡ a * (b + b * c)
-factor-derecha {a} {zero} {c} =
+factor-derecha {zero} {b} {c} = 
    begin
-      a * zero + a * (zero * c)
-   ≡⟨ cong (λ z -> z + a * (zero * c)) (*-zero-r {a})⟩
-      zero + a * (zero * c)
-   ≡⟨ cong (λ z -> zero + a * z) (sym (*-zero-l {c}))⟩
-      zero + a * zero 
-   ≡⟨ {!   !} ⟩
-      a * (zero + zero * c) 
+      (zero * b) + zero * (b * c)
+   ≡⟨ *-zero-l {b} ⟩ --doble!
+      zero + zero
+   ≡⟨ zeroPlus ⟩ 
+      zero
+   ≡⟨ *-zero-add-v2 {b + b * c} ⟩ 
+      zero * (b + b * c)
    ∎
-      
-factor-derecha {a} {suc b} {c} = {!   !}
-
-
+factor-derecha {suc a} {b} {c} =
+   begin
+      (suc a * b) + suc a * (b * c)
+   ≡⟨ refl ⟩
+      b + a * b + suc a * (b * c) 
+   ≡⟨ cong (λ z -> b + a * b + z) refl ⟩ 
+      b + a * b + (b * c + a * (b * c))
+   ≡⟨ sym (+-assoc {b + a * b} {b * c} {a * (b * c)}) ⟩
+      b + a * b + b * c + a * (b * c)
+   --+-comm: a + b ≡ b + a
+   -- el objetivo ahora es cambiar el segundo termino por el tercero
+   --1. asociamos
+   ≡⟨ cong (λ w -> w + a * (b * c)) (+-assoc {b} {a * b} {b * c}) ⟩
+      b + (a * b + b * c) + a * (b * c)
+   --2. cambiamos el orden
+   ≡⟨ cong (λ z -> b + z + a * (b * c)) (+-comm {a * b} {b * c}) ⟩
+      b + (b * c + a * b) + a * (b * c)
+   --3. desasociamos
+   ≡⟨ cong (λ u -> u + a * (b * c)) (sym (+-assoc {b} {b * c} {a * b})) ⟩
+      b + b * c + a * b + a * (b * c)
+   ≡⟨ +-assoc {b + b * c} {a * b} {a * (b * c)} ⟩ 
+      (b + b * c) + (a * b + a * (b * c))
+   ≡⟨ cong (λ z -> b + b * c + z) (factor-derecha {a} {b} {c}) ⟩
+      (b + b * c) + (a * (b + b * c))
+   ≡⟨ sym refl ⟩ 
+      suc a * (b + b * c)
+   ∎
 -- A.4) Demostrar que el producto es asociativo:
 *-assoc : {a b c : ℕ} → (a * b) * c ≡ a * (b * c)
 *-assoc {a} {b} {zero} = 
@@ -266,12 +252,71 @@ factor-derecha {a} {suc b} {c} = {!   !}
 --   a * zero = zero
 --   a * suc b = a + a * b
 *-comm : {a b : ℕ} → a * b ≡ b * a
-*-comm = {!!}
+*-comm {a} {zero} = *-zero-r {a}
+*-comm {a} {suc b} = 
+   begin
+      a * suc b
+   ≡⟨ sym (*-suc-r {a} {b})⟩ 
+      a + a * b
+   ≡⟨ cong (λ z -> a + z) (*-comm {a} {b}) ⟩
+      a + b * a
+   ≡⟨ sym refl ⟩ 
+      suc b * a
+   ∎
+
+-- A.3) Demostrar que el producto distribuye sobre la suma (a izquierda).
+-- lo cambie de orden para poder reutilizar otros predicados auxiliares
+*-+-distrib-l : {a b c : ℕ} → (a + b) * c ≡ a * c + b * c
+*-+-distrib-l {a} {b} {zero} = 
+   begin
+      (a + b) * zero
+   ≡⟨ *-zero-r {a + b}⟩
+      zero
+   ≡⟨ sym (sumOfZeroProductIsZero {a} {b})⟩
+      a * zero + b * zero
+   ∎
+*-+-distrib-l {a} {b} {suc c} =
+   begin
+     (a + b) * suc c
+   ≡⟨ sym (*-suc-r {a + b} {c}) ⟩
+      a + b + ((a + b) * c)
+   ≡⟨ cong (λ z -> a + b + z) (*-+-distrib-l {a} {b} {c}) ⟩  
+      a + b + (a * c + b * c)
+   ≡⟨ sym (+-assoc {a + b} {a * c} {b * c}) ⟩
+      a + b + a * c + b * c 
+   -- acomodamos todo....
+   ≡⟨ cong (λ z -> z + b * c) (+-assoc {a} {b} {a * c}) ⟩
+      a + (b + a * c) + b * c
+   ≡⟨ cong (λ z -> a + z + b * c) (+-comm {b} {a * c}) ⟩
+      a + (a * c + b) + b * c
+   ≡⟨ cong (λ z -> z + b * c) (sym (+-assoc {a} {a * c} {b})) ⟩
+      a + a * c + b + b * c
+   ≡⟨ +-assoc {a + a * c} {b} {b * c} ⟩ 
+   -- listo, quedo todo en orden
+      a + a * c + (b + b * c)
+   ≡⟨ cong (λ z -> z + (b + b * c)) (*-suc-r {a} {c}) ⟩ 
+      a * suc c + (b + b * c)
+   ≡⟨ cong (λ z -> a * suc c + z) (*-suc-r {b} {c}) ⟩ 
+      a * suc c + b * suc c
+   ∎
+
 
 -- A.6) Demostrar que el producto distribuye sobre la suma (a derecha).
 -- Sugerencia: usar la conmutatividad y la distributividad a izquierda.
 *-+-distrib-r : {a b c : ℕ} → a * (b + c) ≡ a * b + a * c
-*-+-distrib-r = {!!}
+*-+-distrib-r {zero} {b} {c} = *-zero-l {b + c}
+*-+-distrib-r {suc a} {b} {c} = 
+   begin
+      suc a * (b + c)
+   ≡⟨ *-comm {suc a} {b + c} ⟩ 
+      (b + c) * suc a
+   ≡⟨ *-+-distrib-l {b} {c} {suc a}⟩ 
+      b * suc a + c * suc a
+   ≡⟨ cong (λ z -> z + c * suc a) (*-comm {b} {suc a}) ⟩ 
+      suc a * b + c * suc a
+   ≡⟨ cong (λ z -> suc a * b + z) (*-comm {c} {suc a}) ⟩ 
+      suc a * b + suc a * c
+   ∎
 
 --------------------------------------------------------------------------------
 
