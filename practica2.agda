@@ -102,6 +102,10 @@ suc-comm-inverse {suc a} {b} = cong suc (suc-comm-inverse {a} {b})
     zero
   ∎
 
+*-zero-l : {a : ℕ} -> zero * a ≡ zero
+*-zero-l {zero} = refl
+*-zero-l {suc a} = refl
+
 sumOfZeroProductIsZero : {a b : ℕ} -> a * zero + b * zero ≡ zero
 sumOfZeroProductIsZero {a} {b} =
    begin
@@ -119,6 +123,7 @@ sumOfZeroProductIsZero {a} {b} =
       zero
    ∎
 
+
 -- A.3) Demostrar que el producto distribuye sobre la suma (a izquierda).
 *-+-distrib-l : {a b c : ℕ} → (a + b) * c ≡ a * c + b * c
 *-+-distrib-l {a} {b} {zero} = 
@@ -129,14 +134,106 @@ sumOfZeroProductIsZero {a} {b} =
    ≡⟨ sym (sumOfZeroProductIsZero {a} {b})⟩
       a * zero + b * zero
    ∎
-*-+-distrib-l {a} {b} {suc c} = {!   !}
+*-+-distrib-l {a} {b} {suc c} = {!   !} 
+-- gpt
+-- begin
+--    (a + b) * suc c
+-- ≡⟨ sym (*-suc-r {a + b} {c}) ⟩
+--    (a + b) + (a + b) * c
+-- ≡⟨ cong (λ z → (a + b) + z) (*-+-distrib-l {a} {b} {c}) ⟩
+--    (a + b) + (a * c + b * c)
+-- ≡⟨ +-assoc {a + b} {a * c} {b * c} ⟩
+--    ((a + b) + a * c) + b * c
+-- ≡⟨ cong (λ z → z + b * c) (+-assoc {a} {b} {a * c}) ⟩
+--    (a + (b + a * c)) + b * c
+-- ≡⟨ cong (λ z → z + b * c) (cong (λ z → a + z) (+-comm {b} {a * c})) ⟩
+--    (a + (a * c + b)) + b * c
+-- ≡⟨ cong (λ z → z + b * c) (+-assoc {a} {a * c} {b}) ⟩
+--    ((a + a * c) + b) + b * c
+-- ≡⟨ +-assoc {(a + a * c)} {b} {b * c} ⟩
+--    (a + a * c) + (b + b * c)
+-- ≡⟨ cong (λ z → z + (b + b * c)) (*-suc-r {a} {c}) ⟩
+--    (a * suc c) + (b + b * c)
+-- ≡⟨ cong (λ z → (a * suc c) + z) (*-suc-r {b} {c}) ⟩
+--    a * suc c + b * suc c
+-- ∎
 
 *-zero-add : {a : ℕ} -> zero ≡ a * zero
 *-zero-add {zero} = refl
 *-zero-add {suc a} = sym (*-zero-r {a})
 
+*-zero-add-v2 : {a : ℕ} -> zero ≡ zero * a
+*-zero-add-v2 {zero} = refl
+*-zero-add-v2 {suc a} = sym (*-zero-l {a})
+
+*-1-add-r : {a : ℕ} ->  a * (suc zero) ≡ a
+*-1-add-r {zero} = *-zero-r {zero}
+*-1-add-r {suc a} = 
+   begin
+      suc a * suc zero
+   ≡⟨ refl ⟩
+      suc zero + a * suc zero
+   ≡⟨ cong (λ c -> suc zero + c) (*-1-add-r {a}) ⟩ 
+      suc zero + a
+   ≡⟨ refl ⟩
+      suc a
+   ∎
++-suc-a-is-suc-zero+a : {a : ℕ} -> suc a ≡ suc zero + a
++-suc-a-is-suc-zero+a {a} = refl
+
 *-suc-r : {a b : ℕ} -> a + a * b ≡ a * suc b
-*-suc-r {a} {b} = {!   !}
+*-suc-r {zero} {b} = 
+   begin
+      zero + zero * b
+   ≡⟨ plusZero {zero * b}⟩
+      zero * b
+   ≡⟨ *-zero-l {b} ⟩ 
+      zero  
+   ≡⟨ *-zero-add-v2 {suc b}⟩
+      zero * suc b 
+   ∎
+
+*-suc-r {suc a} {b} = 
+   begin
+      suc a + suc a * b
+   ≡⟨ cong (λ c -> suc a + c) refl ⟩ 
+      suc a + (b + a * b)
+   ≡⟨ +-assoc ⟩ 
+      suc a + b + a * b
+   ≡⟨ cong (λ c -> c + b + a * b) (+-suc-a-is-suc-zero+a {a}) ⟩ -- suc a ≡ suc zero + a 
+      suc zero + a + b + a * b
+-- me hubiese gustado hacer desde aca hasta HI con cong en un solo paso
+-- pero me rompia la asociatividad o algo asi...
+   ≡⟨ +-assoc {(suc zero + a)} {b} {a * b} ⟩
+      suc zero + a + (b + a * b)
+   ≡⟨ cong (λ c -> suc zero + a + c) (+-comm {b} {a * b}) ⟩ 
+      suc zero + a + (a * b + b)
+   ≡⟨ sym (+-assoc {(suc zero + a)} {a * b} {b}) ⟩
+      suc zero + a + a * b + b
+   ≡⟨ cong (λ z -> suc zero + z + b) (*-suc-r {a} {b}) ⟩ -- HI con cong
+      suc zero + a * suc b + b
+   ≡⟨ cong (λ z -> suc zero + z) (+-comm {a * suc b} {b}) ⟩
+      suc zero + b + a * suc b
+   ≡⟨ cong (λ z -> z + a * suc b) (+-suc-a-is-suc-zero+a {b}) ⟩ -- suc zero + b ≡ b (y un cong)
+      suc b + a * suc b
+   ≡⟨ refl ⟩ --def de _*_
+      suc a * suc b 
+   ∎
+
+
+factor-derecha : {a b c : ℕ} -> (a * b) + a * (b * c) ≡ a * (b + b * c)
+factor-derecha {a} {zero} {c} =
+   begin
+      a * zero + a * (zero * c)
+   ≡⟨ cong (λ z -> z + a * (zero * c)) (*-zero-r {a})⟩
+      zero + a * (zero * c)
+   ≡⟨ cong (λ z -> zero + a * z) (sym (*-zero-l {c}))⟩
+      zero + a * zero 
+   ≡⟨ {!   !} ⟩
+      a * (zero + zero * c) 
+   ∎
+      
+factor-derecha {a} {suc b} {c} = {!   !}
 
 
 -- A.4) Demostrar que el producto es asociativo:
@@ -154,12 +251,12 @@ sumOfZeroProductIsZero {a} {b} =
 *-assoc {a} {b} {suc c} = 
     begin
        (a * b) * suc c
-    ≡⟨ {!   !}  ⟩
+    ≡⟨ sym (*-suc-r {a * b} {c})  ⟩
        (a * b) + (a * b * c)
-    ≡⟨ cong (λ z -> (a * b) + z) (*-assoc {a} {b} {c}) ⟩ 
+    ≡⟨ cong (λ z -> (a * b) + z) (*-assoc {a} {b} {c}) ⟩ -- hipotesis inductiva
        (a * b) + a * (b * c)
-    ≡⟨ cong (λ z -> a * b + a * z) (*-assoc {a} {b} {c})⟩ --Esto esta mal
-       a * (b + b * c)
+   ≡⟨ factor-derecha {a} {b} {c} ⟩ 
+      a * (b + b * c)
     ≡⟨ cong (λ z -> a * z) (*-suc-r {b} {c}) ⟩ 
        a * (b * suc c)
     ∎
