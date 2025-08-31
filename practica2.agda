@@ -408,16 +408,31 @@ kMasSucNEsSucM {suc k} {n} {m} sucKPlusNIsM =
 zero-no-es-suc : {n : ℕ} → suc n ≡ zero → ⊥
 zero-no-es-suc ()
 
+suc≤zero->⊥ : {a : ℕ} -> suc a ≤ zero -> ⊥
+suc≤zero->⊥ {a} (k , p) = zero-no-es-suc (trans (sym (suc-comm-inverse {k} {a})) p)
+
 -- B.3) Demostrar que la función es completa con respecto a su especificación.
 -- Sugerencia: seguir el esquema de inducción con el que se define la función _≤?_.
 -- * Para el caso en el que n = suc n' y m = zero, usar el ítem B.2 y propiedades de la suma.
 -- * Para el caso en el que n = suc n' y m = suc m', recurrir a la hipótesis inductiva y propiedades de la suma.
 
-≤?-completa : {n m : ℕ} → n ≤ m → (n ≤? m) ≡ true
-≤?-completa {zero} {zero} (zero , k) = {!   !} 
-≤?-completa {suc n} {zero} (p , k) = {!   !}
-≤?-completa {n} {suc m} (p , k) = {!   !}
+suc-cancel : {a b : ℕ} -> suc a ≡ suc b -> a ≡ b
+suc-cancel refl = refl
 
+suc-comm-inverse-receives-equality : {a b k : ℕ} -> k + suc a ≡ suc b -> suc (k + a) ≡ suc b
+--gpt...
+suc-comm-inverse-receives-equality {a} {b} {k} p = trans (sym (suc-comm-inverse {k} {a})) p
+
+suc-n-≤-suc-m-remove-suc : {n m : ℕ} -> suc n ≤ suc m -> n ≤ m
+--p es de tipo k + suc n ≡ suc m
+suc-n-≤-suc-m-remove-suc {n} {m} (k , p) = k , (suc-cancel (suc-comm-inverse-receives-equality {n} {m} {k} p))
+
+≤?-completa : {n m : ℕ} → n ≤ m → (n ≤? m) ≡ true
+≤?-completa {zero} {zero} (zero , _) = refl 
+≤?-completa {suc n} {zero} sucNLessThanZero = ⊥-elim (suc≤zero->⊥ sucNLessThanZero)
+--En este caso nos dan que p es "k + n ≤ suc m"
+≤?-completa {zero} {suc m} (k , p) = refl
+≤?-completa {suc n} {suc m} sucNLeqSucM = ≤?-completa {n} {m} (suc-n-≤-suc-m-remove-suc sucNLeqSucM)
 --------------------------------------------------------------------------------
 
 ---- Parte C ----
@@ -436,23 +451,29 @@ indℕ C c0 cS (suc n) = cS n (indℕ C c0 cS n)
 _<_ : ℕ → ℕ → Set
 n < m = suc n ≤ m
 
-suc≤zero->⊥ : {a : ℕ} -> suc a ≤ zero -> ⊥
-suc≤zero->⊥ {a} (k , p) = zero-no-es-suc (trans (sym (suc-comm-inverse {k} {a})) p)
+
+suc≤-to-≤ : {m n : ℕ} → suc m ≤ suc n → m ≤ n
+suc≤-to-≤ {m} {n} (k , p) =
+  k , suc-cancel (trans (sym (suc-comm-inverse {k} {m})) p)
 
 -- C.1) Demostrar el principio de inducción completa, que permite recurrir a la hipótesis
 -- inductiva sobre cualquier número estrictamente menor.
 ind-completa : (C : ℕ → Set)
                (f : (n : ℕ)
-                  → ((m : ℕ) → suc m ≤ n → C m)
+                  → ((m : ℕ) → m < n → C m)
                   → C n)
                (n : ℕ)
                → C n
 
 -- Dado n ≤ 0, producir C n   
--- como nos estan dando un absurdo (la demo de que suc m ≤ zero), lo "parseamos" para obtener ⊥, y luego lo eliminamos y
+-- como nos estan dando un absurdo (la demo de que m < zero), lo "parseamos" para obtener ⊥, y luego lo eliminamos y
 -- para obtener "cualquier cosa". En este caso, C m
 ind-completa C f zero = f zero (λ m (k , p) -> ⊥-elim (suc≤zero->⊥ (k , p) ))
-ind-completa C f (suc n) = f (suc n) (λ m (k , p) ->  )
+-- aca (k , p) es suc n ≤ suc m: lo pasamos a n ≤ m
+ind-completa C f (suc n) = 
+   f 
+      (suc n) 
+      (λ m sucNIsLessThanSucM  -> {!   !} )
 
 --------------------------------------------------------------------------------
 
@@ -465,19 +486,19 @@ ind≡ : {A : Set}
        {C : (a b : A) → a ≡ b → Set}
      → ((a : A) → C a a refl)
      → (a b : A) (p : a ≡ b) → C a b p
-ind≡ = {!!}
+ind≡ cEq a _ refl = cEq a
 
 -- D.2) Demostrar nuevamente la simetría de la igualdad, usando ind≡:
 
 sym' : {A : Set} {a b : A} → a ≡ b → b ≡ a
-sym' = {!!}
+sym' {A} {a} {b} aEqb = ind≡ {C = λ a b _ → b ≡ a} (λ _ -> refl) a b aEqb 
 
 -- D.3) Demostrar nuevamente la transitividad de la igualdad, usando ind≡:
 
 trans' : {A : Set} {a b c : A} → a ≡ b → b ≡ c → a ≡ c
-trans' = {!!}
+trans' {A} {a} {b} {c} aEqB bEqC = (ind≡ {C = λ a b _ → (b ≡ c → a ≡ c)} (λ z zIsC -> zIsC) a b aEqB) bEqC
 
 -- D.4) Demostrar nuevamente que la igualdad es una congruencia, usando ind≡:
 
 cong' : {A B : Set} {a b : A} → (f : A → B) → a ≡ b → f a ≡ f b
-cong' = {!!}
+cong' {A} {B} {a} {b} f aEqB = ind≡ {C = λ a b _ -> f a ≡ f b} (λ z -> refl) a b aEqB
