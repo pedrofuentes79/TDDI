@@ -338,14 +338,75 @@ suc n ≤? suc m = n ≤? m
 
 -- B.1) Demostrar que la función es correcta con respecto a su especificación.
 -- Sugerencia: seguir el esquema de inducción con el que se define la función _≤?_.
+zeroPlusRemoved : {a b : ℕ} -> zero + a ≡ b -> a ≡ b
+zeroPlusRemoved {zero} {b} zeroPlusZeroIsB = 
+   begin
+      zero
+   ≡⟨ plusZero {zero} ⟩
+      zero + zero
+   ≡⟨ zeroPlusZeroIsB ⟩
+      b 
+   ∎
+zeroPlusRemoved {suc a} {zero} ()
+zeroPlusRemoved {suc a} {suc b} ZeroPlusSucAIsSucB = 
+   begin
+      suc a
+   ≡⟨ zeroPlus ⟩ 
+      zero + suc a
+   ≡⟨ ZeroPlusSucAIsSucB ⟩ 
+      suc b
+   ∎
+
+
+kMasSucNEsSucM : {k n m : ℕ} -> (k + n ≡ m) -> k + suc n ≡ suc m
+kMasSucNEsSucM {zero} {n} {m} zeroPlusNIsM = 
+   begin
+      zero + suc n
+   ≡⟨ zeroPlus ⟩
+      suc n
+   ≡⟨ +-suc-a-is-suc-zero+a ⟩  
+      suc zero + n
+   ≡⟨ cong (λ z -> suc zero + z) (zeroPlusRemoved zeroPlusNIsM) ⟩ 
+      suc zero + m
+   ≡⟨ +-suc-a-is-suc-zero+a ⟩  
+      suc m
+   ∎
+kMasSucNEsSucM {suc k} {n} {m} sucKPlusNIsM = 
+   begin
+      suc k + suc n
+   ≡⟨ cong (λ z -> suc k + z) (+-suc-a-is-suc-zero+a {n})⟩
+   -- parentesis...
+      suc k + (suc zero + n)
+   ≡⟨ sym (+-assoc {suc k} {suc zero} {n}) ⟩
+      suc k + suc zero + n
+   -- ahora si
+   ≡⟨ cong (λ z → z + n) (+-comm {suc k} {suc zero}) ⟩
+      suc zero + suc k + n
+   ≡⟨ cong (λ z -> suc zero + z) (sucKPlusNIsM) ⟩  
+      suc zero + m
+   ≡⟨ +-suc-a-is-suc-zero+a ⟩ 
+      suc m
+   ∎
+
 
 ≤?-correcta : {n m : ℕ} → (n ≤? m) ≡ true → n ≤ m
-≤?-correcta = {!!}
+≤?-correcta {zero} {m} _ = m , (sym (plusZero {m}))
+-- aca nunca se va a pattern-matchear.
+-- dado que no es posible que suc _ ≤? zero sea true
+≤?-correcta {suc n} {zero} ()
+-- Aca queremos encontrar un par (k, p)
+-- Donde k : ℕ, y p, dado un ℕ, devuelve
+-- una prueba de que k + suc n ≡ suc m
+-- tambien podria usar que suc k + suc m ≡ suc (k + m) por def.
+≤?-correcta {suc n} {suc m} dem = 
+   -- "p" nos dice que k + n ≡ m
+   let k , p = ≤?-correcta {n} {m} dem in (k , kMasSucNEsSucM p)
+
 
 -- B.2) Demostrar que es imposible que el cero sea el sucesor de algún natural:
 
 zero-no-es-suc : {n : ℕ} → suc n ≡ zero → ⊥
-zero-no-es-suc = {!!}
+zero-no-es-suc ()
 
 -- B.3) Demostrar que la función es completa con respecto a su especificación.
 -- Sugerencia: seguir el esquema de inducción con el que se define la función _≤?_.
@@ -353,7 +414,9 @@ zero-no-es-suc = {!!}
 -- * Para el caso en el que n = suc n' y m = suc m', recurrir a la hipótesis inductiva y propiedades de la suma.
 
 ≤?-completa : {n m : ℕ} → n ≤ m → (n ≤? m) ≡ true
-≤?-completa = {!!}
+≤?-completa {zero} {zero} (zero , k) = {!   !} 
+≤?-completa {suc n} {zero} (p , k) = {!   !}
+≤?-completa {n} {suc m} (p , k) = {!   !}
 
 --------------------------------------------------------------------------------
 
@@ -373,6 +436,9 @@ indℕ C c0 cS (suc n) = cS n (indℕ C c0 cS n)
 _<_ : ℕ → ℕ → Set
 n < m = suc n ≤ m
 
+suc≤zero->⊥ : {a : ℕ} -> suc a ≤ zero -> ⊥
+suc≤zero->⊥ {a} (k , p) = zero-no-es-suc (trans (sym (suc-comm-inverse {k} {a})) p)
+
 -- C.1) Demostrar el principio de inducción completa, que permite recurrir a la hipótesis
 -- inductiva sobre cualquier número estrictamente menor.
 ind-completa : (C : ℕ → Set)
@@ -381,7 +447,12 @@ ind-completa : (C : ℕ → Set)
                   → C n)
                (n : ℕ)
                → C n
-ind-completa C f n = {!!}
+
+-- Dado n ≤ 0, producir C n   
+-- como nos estan dando un absurdo (la demo de que suc m ≤ zero), lo "parseamos" para obtener ⊥, y luego lo eliminamos y
+-- para obtener "cualquier cosa". En este caso, C m
+ind-completa C f zero = f zero (λ m (k , p) -> ⊥-elim (suc≤zero->⊥ (k , p) ))
+ind-completa C f (suc n) = f (suc n) (λ m (k , p) ->  )
 
 --------------------------------------------------------------------------------
 
