@@ -1,3 +1,5 @@
+{-# OPTIONS --allow-unsolved-metas #-}
+module practica2 where
 
 ----
 ---- Práctica 2: Naturales e igualdad
