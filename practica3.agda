@@ -247,22 +247,65 @@ data Bin : Set where
 
 -- B.1) Definir la función que convierte un número representado en binario a natural:
 bin2nat : Bin → ℕ
-bin2nat binzero      = {!!}
-bin2nat (addbit x b) = {!!}
+bin2nat binzero      = zero
+bin2nat (addbit x false) = bin2nat x + bin2nat x
+bin2nat (addbit x true) = suc (bin2nat x + bin2nat x)
 
 -- B.2) Definir la función sucesor sobre números naturales representados en binario:
 binsuc : Bin → Bin
-binsuc binzero          = {!!}
-binsuc (addbit x false) = {!!}
-binsuc (addbit x true)  = {!!}
+binsuc binzero          = addbit binzero true
+binsuc (addbit x false) = addbit x true
+binsuc (addbit x true)  = addbit (binsuc x) false       --propaga el 0 (carry!!!)
 
 -- B.3) Usando binsuc, definir la función que convierte un número natural a su representación binaria:
 nat2bin : ℕ → Bin
-nat2bin = {!!}
+nat2bin zero = binzero
+nat2bin (suc n) = binsuc (nat2bin n)
+
+
+bin2nat-binsuc-suc : {bin : Bin} -> bin2nat (binsuc bin) ≡ suc (bin2nat bin)
+bin2nat-binsuc-suc {binzero} = refl
+bin2nat-binsuc-suc {addbit x true} = 
+    begin
+        bin2nat (binsuc (addbit x true))
+    ≡⟨ refl ⟩
+        bin2nat (addbit (binsuc x) false) 
+    ≡⟨ refl ⟩ 
+        bin2nat (binsuc x) + bin2nat (binsuc x)
+    ≡⟨ cong (λ z -> z + bin2nat (binsuc x)) (bin2nat-binsuc-suc {x})⟩ 
+        suc (bin2nat x) + bin2nat (binsuc x)
+    ≡⟨ cong (λ z -> suc (bin2nat x) + z) (bin2nat-binsuc-suc {x})⟩ 
+        suc (bin2nat x) + suc (bin2nat x)
+    ≡⟨ refl ⟩ 
+        suc (bin2nat x + suc (bin2nat x))
+    ≡⟨ cong suc (+-comm (bin2nat x) (suc (bin2nat x))) ⟩ 
+        suc (suc (bin2nat x + bin2nat x))
+    ≡⟨ cong suc (sym refl) ⟩ 
+        suc (bin2nat (addbit x true))
+    ∎
+bin2nat-binsuc-suc {addbit x false} = refl 
+
 
 -- B.4) Demostrar que bin2nat es la inversa a izquierda de nat2bin:
 nat2bin2nat : (n : ℕ) → bin2nat (nat2bin n) ≡ n
-nat2bin2nat = {!!}
+nat2bin2nat zero = refl 
+    -- begin
+    --     bin2nat (nat2bin zero)
+    -- ≡⟨ refl ⟩
+    --     bin2nat (binzero)
+    -- ≡⟨ refl ⟩ 
+    --     zero
+    -- ∎
+nat2bin2nat (suc n) = 
+    begin 
+        bin2nat (nat2bin (suc n))
+    ≡⟨ refl ⟩ 
+        bin2nat (binsuc (nat2bin n))
+    ≡⟨ bin2nat-binsuc-suc {nat2bin n}⟩ 
+        suc (bin2nat (nat2bin n))
+    ≡⟨ cong (λ z -> suc z) (nat2bin2nat n) ⟩ 
+        suc n
+    ∎
 
 -- B.5) Definir la siguiente función, que descompone un número natural en su cociente y su resto
 -- en la división por 2:
@@ -282,28 +325,28 @@ transport _ refl b = b
 -- equivale a transportar por la familia B vía el camino (cong f p).
 transport-compose : {A A' : Set} (f : A → A') (B : A' → Set) {x y : A} (p : x ≡ y) (b : B (f x))
            → transport (λ x → B (f x)) p b ≡ transport B (cong f p) b
-transport-compose = {!!}
+transport-compose f B refl b = refl
 
 -- C.2) Demostrar que transportar vía la composición de dos caminos
 -- equivale a transportar separadamente vía cada uno de ellos.
 transport-∙ : {A : Set} (B : A → Set) {x y z : A} (p : x ≡ y) (q : y ≡ z) (b : B x)
            → transport B (p ∙ q) b ≡ transport B q (transport B p b)
-transport-∙ = {!!}
+transport-∙ B refl refl b = refl
 
 -- C.3) Demostrar que transportar por una familia constante es la identidad.
 transport-const : {A : Set} (B₀ : Set) {x y : A} (p : x ≡ y) (b : B₀)
                 → transport (λ _ → B₀) p b ≡ b
-transport-const = {!!}
+transport-const B0 refl b = refl
 
 -- C.4) Demostrar que transportar por una familia de caminos corresponde a componer: 
 transport-path-left : {A : Set} {x y z : A} (p : x ≡ y) (q : x ≡ z)
                     → transport (λ a → a ≡ z) p q ≡ (p ⁻¹) ∙ q
-transport-path-left = {!!}
+transport-path-left refl refl = refl
 
 -- C.5) Similar pero con la composición a derecha:
 transport-path-right : {A : Set} {x y z : A} (p : x ≡ y) (q : z ≡ x)
                      → transport (λ a → z ≡ a) p q ≡ q ∙ p
-transport-path-right = {!!}
+transport-path-right refl refl = refl
 
 ---- Parte D ----
 
@@ -314,13 +357,35 @@ data Fin : (n : ℕ) → Set where
   finZero : Fin zero
   -- Si x es un habitante de Fin n,
   -- entonces finSuc x es un habitante de Fin (suc n).
-  finSucc  : {n : ℕ} → Fin n → Fin (suc n)
+  finSuc  : {n : ℕ} → Fin n → Fin (suc n)
 
 -- D.1) Definir la suma:
 sumaFin : {n m : ℕ} → Fin n → Fin m → Fin (n + m)
-sumaFin finZero     y = {!!}
-sumaFin (finSucc x) y = {!!}
+-- sumaFin finZero finZero = finZero
+-- sumaFin finZero (finSuc y) = finSuc y
+-- sumaFin {n} (finSuc x) finZero = transport (λ n -> Fin n) (+-comm zero n) (finSuc x)
+-- -- Tomamos Fin (n + m) en el orden que corresponde, 
+-- -- y damos la demo de que m + n ≡ n + m
+-- --
+-- sumaFin {n} {m} (finSuc x) (finSuc y) = transport (λ z -> Fin (n + m)) (+-comm m n) (finSuc (sumaFin x y))
+
+sumaFin {n} {m} finZero    y = y
+sumaFin {n} {m} (finSuc x) y = transport (λ z -> Fin (n + m)) (+-comm m n) (finSuc (sumaFin x y))
 
 -- D.2) Demostrar que la suma es conmutativa:
 sumaFin-comm : {n m : ℕ} (x : Fin n) (y : Fin m) → sumaFin x y ≡ transport Fin (+-comm m n) (sumaFin y x)
-sumaFin-comm = {!!}
+sumaFin-comm finZero finZero = refl
+sumaFin-comm {zero} {m} finZero (finSuc y) = 
+    begin
+        sumaFin finZero (finSuc y)
+    ≡⟨ {!   !}  ⟩ 
+        transport (λ _ -> Fin (zero + suc m)) (+-comm zero (suc m)) (finSuc (sumaFin y finZero))
+    ≡⟨ {!   !}  ⟩ 
+        transport Fin (+-comm m zero) (sumaFin (finSuc y) finZero)
+    ∎
+sumaFin-comm {(suc n)} {m} (finSuc x) y = {!   !}
+    -- begin
+    --     sumaFin x y 
+    -- ≡⟨ {!   !} ⟩
+    --     transport Fin (+-comm m n) (sumaFin y x)
+    -- ∎ 
