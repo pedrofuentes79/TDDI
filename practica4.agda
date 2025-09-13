@@ -42,12 +42,59 @@ _++_ : {A : Set} → List A → List A → List A
 -- A.1) Demostrar que map conmuta con la concatenación:
 map-++ : {A B : Set} {f : A → B} {xs ys : List A}
        → map f (xs ++ ys) ≡ map f xs ++ map f ys
-map-++ = {!!}
+map-++ {A} {B} {f} {[]} {ys} = refl
+    -- begin
+    --     map f ([] ++ ys)
+    -- ≡⟨ cong (map f) (refl)⟩
+    --     map f ys 
+    -- ≡⟨ sym refl ⟩ 
+    --     [] ++ map f ys
+    -- ≡⟨ cong (λ z -> z ++ map f ys) (refl) ⟩ 
+    --     map f [] ++ map f ys
+    -- ∎
+
+map-++ {A} {B} {f} {x ∷ xs} {ys} = 
+    begin
+       map f ((x ∷ xs) ++ ys)
+    ≡⟨ refl ⟩
+       map f (x ∷ (xs ++ ys)) 
+    ≡⟨ refl ⟩
+       f x ∷ (map f (xs ++ ys)) 
+    ≡⟨ cong (λ z -> f x ∷ z) (map-++ {xs = xs} {ys = ys}) ⟩
+       f x ∷ (map f xs ++ map f ys)
+    ≡⟨ sym refl ⟩
+       (f x ∷ map f xs) ++ map f ys
+    ≡⟨ refl ⟩
+       map f (x ∷ xs) ++ map f ys
+    ∎
 
 -- A.2) Demostrar que map conmuta con la composición:
 map-∘ : {A B C : Set} {f : A → B} {g : B → C} {xs : List A}
        → map (g ∘ f) xs ≡ map g (map f xs)
-map-∘ = {!!}
+map-∘ {A} {B} {C} {f} {g} {[]} = refl
+    -- begin
+    --     map (g ∘ f) []
+    -- ≡⟨ refl ⟩
+    --     []
+    -- ≡⟨ sym refl ⟩ 
+    --     map g []
+    -- ≡⟨ cong (λ z -> map g z) (sym refl) ⟩
+    --     map g (map f [])
+    -- ∎ 
+map-∘ {A} {B} {C} {f} {g} {x ∷ xs} = 
+    begin
+        map (g ∘ f) (x ∷ xs)
+    ≡⟨ refl ⟩ 
+        ((g ∘ f) x) ∷ (map (g ∘ f) xs)
+    ≡⟨ refl ⟩ 
+        g (f x) ∷ (map (g ∘ f) xs)
+    ≡⟨ cong (λ z -> g (f x) ∷ z) (map-∘) ⟩ 
+        g (f x) ∷ (map g (map f xs))
+    ≡⟨ refl ⟩ 
+        map g (f x ∷ (map f xs))
+    ≡⟨ refl ⟩ 
+        map g (map f (x ∷ xs))
+    ∎
 
 -- Definimos el siguiente predicado que se verifica si un elemento
 -- aparece en una lista:
@@ -56,19 +103,29 @@ _∈_ : {A : Set} → A → List A → Set
 x ∈ []       = ⊥
 x ∈ (y ∷ ys) = (x ≡ y) ⊎ (x ∈ ys)
 
+-- data _⊎_ (A : Set a) (B : Set b) : Set (a ⊔ b) where
+--   inj₁ : (x : A) → A ⊎ B
+--   inj₂ : (y : B) → A ⊎ B
+
 -- A.3) Demostrar que si un elemento aparece en la concatenación de
 -- dos listas, debe aparecer en alguna de ellas:
 ∈-++ : ∀ {A : Set} {z : A} {xs ys : List A}
        → z ∈ (xs ++ ys)
        → (z ∈ xs) ⊎ (z ∈ ys)
-∈-++ = {!!}
+∈-++ {A} {z} {[]} {ys} zInConcat = inj₂ zInConcat
+∈-++ {A} {z} {x ∷ xs} {ys} (inj₁ z≡x ) = inj₁ (inj₁ z≡x)
+∈-++ {A} {z} {x ∷ xs} {ys} (inj₂ zInConcat) with ∈-++ {xs = xs} (zInConcat)
+... | inj₁ z∈xs = inj₁ (inj₂ z∈xs)
+... | inj₂ z∈ys = inj₂ z∈ys
 
 -- A.4) Demostrar que si un elemento z aparece en una lista xs,
 -- su imagen (f z) aparece en (map f xs):
 ∈-map : ∀ {A B : Set} {f : A → B} {z : A} {xs : List A}
         → z ∈ xs
         → f z ∈ map f xs
-∈-map = {!!}
+∈-map {A} {B} {f} {z} {[]} () 
+∈-map {A} {B} {f} {z} {x ∷ xs} (inj₁ z≡x) = inj₁ (cong f z≡x)
+∈-map {A} {B} {f} {z} {x ∷ xs} (inj₂ zInXs) = inj₂ (∈-map {xs = xs} zInXs)
 
 -- Definimos el siguiente predicado que se verifica si todos los
 -- elementos de una lista son iguales:
@@ -82,7 +139,9 @@ todos-iguales (x ∷ (y ∷ ys)) = (x ≡ y) × todos-iguales (y ∷ ys)
 todos-iguales-map : {A B : Set} {f : A → B} {xs : List A}
                   → todos-iguales xs
                   → todos-iguales (map f xs)
-todos-iguales-map = {!!}
+todos-iguales-map {A} {B} {f} {[]} todosIgualesListaVacio = todosIgualesListaVacio
+todos-iguales-map {A} {B} {f} {x ∷ []} todosIgualesListaVacio = todosIgualesListaVacio
+todos-iguales-map {A} {B} {f} {x ∷ (y ∷ ys)} (x≡y , todosIgualesy∷ys) = ((cong f x≡y) , todos-iguales-map todosIgualesy∷ys)
 
 -- Parte B --
 
@@ -101,23 +160,47 @@ record _≃_ (A B : Set) : Set where
 
 -- B.1) Demostrar que la equivalencia de tipos es reflexiva, simétrica y transitiva:
 
+id : {A : Set} -> A -> A
+id x = x
+
 ≃-refl : ∀ {A} → A ≃ A
-≃-refl = {!!}
+_≃_.to (≃-refl {A}) = id
+_≃_.from (≃-refl {A}) = id
+_≃_.from∘to (≃-refl {A}) = (λ a -> refl)
+_≃_.to∘from (≃-refl {A}) = (λ a -> refl) 
 
 ≃-sym : ∀ {A B} → A ≃ B → B ≃ A
-≃-sym = {!!}
+_≃_.to (≃-sym aEquivB) = _≃_.from aEquivB
+_≃_.from (≃-sym aEquivB) = _≃_.to aEquivB
+_≃_.from∘to (≃-sym aEquivB) = (λ a -> (_≃_.to∘from aEquivB) a)
+_≃_.to∘from (≃-sym aEquivB) = (λ a -> (_≃_.from∘to aEquivB) a)
 
 ≃-trans : ∀ {A B C} → A ≃ B → B ≃ C → A ≃ C
-≃-trans = {!!}
+_≃_.to      (≃-trans A≃B B≃C) = (_≃_.to B≃C ∘ _≃_.to A≃B)
+_≃_.from    (≃-trans A≃B B≃C) = (_≃_.from A≃B ∘ _≃_.from B≃C)
+_≃_.from∘to (≃-trans A≃B B≃C) = (λ a → trans (cong (_≃_.from A≃B) ((_≃_.from∘to B≃C) (_≃_.to A≃B a))) (_≃_.from∘to A≃B a))
+_≃_.to∘from (≃-trans A≃B B≃C) = (λ c -> trans (cong (_≃_.to B≃C) ((_≃_.to∘from A≃B) (_≃_.from B≃C c))) (_≃_.to∘from B≃C c))
 
 -- B.2) Demostrar que el producto de tipos es conmutativo, asociativo,
 -- y que ⊤ es el elemento neutro:
 
+invert : {A B : Set} -> (A × B) -> (B × A)
+invert (a , b) = (b , a)
+
 ×-comm : {A B : Set} → (A × B) ≃ (B × A)
-×-comm = {!!}
+_≃_.to ×-comm = invert
+_≃_.from ×-comm = invert
+_≃_.from∘to ×-comm = (λ (a , b) -> refl) 
+_≃_.to∘from ×-comm = (λ (a , b) -> refl)
+
+invert-order-× : {A B C : Set} -> (A × (B × C)) -> ((A × B) × C)
+invert-order-× (a , (b , c)) = ((a , b) , c)
 
 ×-assoc : {A B C : Set} → (A × (B × C)) ≃ ((A × B) × C)
-×-assoc = {!!}
+_≃_.to ×-assoc = (λ (a , (b , c)) -> ((a , b) , c))
+_≃_.from ×-assoc = (λ ((a , b) , c) -> (a , (b , c)))
+_≃_.from∘to ×-assoc = (λ (a , (b , c)) -> {!   !} )
+_≃_.to∘from ×-assoc = {!   !}
 
 ×-⊤-neut : {A : Set} → (A × ⊤) ≃ A
 ×-⊤-neut = {!!}
