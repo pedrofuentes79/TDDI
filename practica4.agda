@@ -199,23 +199,35 @@ invert-order-× (a , (b , c)) = ((a , b) , c)
 ×-assoc : {A B C : Set} → (A × (B × C)) ≃ ((A × B) × C)
 _≃_.to ×-assoc = (λ (a , (b , c)) -> ((a , b) , c))
 _≃_.from ×-assoc = (λ ((a , b) , c) -> (a , (b , c)))
-_≃_.from∘to ×-assoc = (λ (a , (b , c)) -> {!   !} )
-_≃_.to∘from ×-assoc = {!   !}
+_≃_.from∘to ×-assoc = (λ (a , (b , c)) -> refl )
+_≃_.to∘from ×-assoc = (λ ((a , b) , c) -> refl )
 
 ×-⊤-neut : {A : Set} → (A × ⊤) ≃ A
-×-⊤-neut = {!!}
+×-⊤-neut ._≃_.to = (λ (a , tt) -> a)
+×-⊤-neut ._≃_.from = (λ a -> (a , tt))
+×-⊤-neut ._≃_.from∘to = (λ (a , tt) -> refl)
+×-⊤-neut ._≃_.to∘from = (λ a -> refl)
 
 -- B.3) Demostrar que la suma de tipos es conmutativa, asociativa,
 -- y que ⊥ es el elemento neutro:
 
 ⊎-comm : {A B : Set} → (A ⊎ B) ≃ (B ⊎ A)
-⊎-comm = {!!}
+⊎-comm ._≃_.to = λ {(inj₁ a) -> inj₂ a ; (inj₂ b) -> inj₁ b}
+⊎-comm ._≃_.from = λ {(inj₁ b) -> inj₂ b ; (inj₂ a) -> inj₁ a}
+⊎-comm ._≃_.from∘to = λ {(inj₁ a) -> refl ; (inj₂ b) -> refl }
+⊎-comm ._≃_.to∘from = λ {(inj₁ b) -> refl ; (inj₂ a) -> refl }
 
 ⊎-assoc : {A B C : Set} → (A ⊎ (B ⊎ C)) ≃ ((A ⊎ B) ⊎ C)
-⊎-assoc = {!!}
+⊎-assoc ._≃_.to = λ {(inj₁ a) -> (inj₁ (inj₁ a)) ; (inj₂ (inj₁ b)) -> inj₁ (inj₂ b)  ; (inj₂ (inj₂ c)) -> inj₂ c}
+⊎-assoc ._≃_.from = λ {(inj₁ (inj₁ a)) -> inj₁ a ; (inj₁ (inj₂ b)) -> inj₂ (inj₁ b)  ; (inj₂ c) -> inj₂ (inj₂ c)} 
+⊎-assoc ._≃_.from∘to = λ {(inj₁ a) -> refl ; (inj₂ (inj₁ b)) -> refl  ; (inj₂ (inj₂ c)) -> refl }
+⊎-assoc ._≃_.to∘from = λ {(inj₁ (inj₁ a)) -> refl ; (inj₁ (inj₂ b)) -> refl ; (inj₂ c) -> refl } 
 
 ⊎-⊥-neut : {A : Set} → (A ⊎ ⊥) ≃ A
-⊎-⊥-neut = {!!}
+⊎-⊥-neut ._≃_.to = λ { (inj₁ a) -> a }
+⊎-⊥-neut ._≃_.from = λ a -> inj₁ a
+⊎-⊥-neut ._≃_.from∘to = λ { (inj₁ a) -> refl }
+⊎-⊥-neut ._≃_.to∘from = λ a -> refl
 
 -- B.5) Demostrar las siguientes "leyes exponenciales".
 --
@@ -231,17 +243,59 @@ _≃_.to∘from ×-assoc = {!   !}
 --   C^(A + B) = C^A ∙ C^B
 --   C^(A ∙ B) = (C^B)^A
 
+ExtensionalidadFuncional : Set₁
+ExtensionalidadFuncional =
+  {A : Set} {B : A → Set} {f g : (a : A) → B a}
+  → ((a : A) → f a ≡ g a)
+  → f ≡ g
+
+postulate extensionalidad-funcional : ExtensionalidadFuncional
+
+
 exp-cero : {A : Set} → (⊥ → A) ≃ ⊤
-exp-cero = {!!}
+-- uso la notacion con pattern matching directo ahi
+exp-cero ._≃_.to _ = tt
+exp-cero ._≃_.from tt = λ x → ⊥-elim x
+exp-cero ._≃_.from∘to f = extensionalidad-funcional (λ x → ⊥-elim x)
+exp-cero ._≃_.to∘from = λ { tt -> refl }
 
 exp-uno : {A : Set} → (⊤ → A) ≃ A
-exp-uno = {!!}
+exp-uno ._≃_.to ttToA = ttToA tt
+exp-uno ._≃_.from a = λ tt -> a
+exp-uno ._≃_.from∘to = λ ttToA -> refl
+exp-uno ._≃_.to∘from = λ a -> refl
+
+
+exp-suma-to : {A B C : Set} → ((A ⊎ B) → C) → (A → C) × (B → C)
+exp-suma-to aUnionBToC = (λ a → aUnionBToC (inj₁ a)) , (λ b → aUnionBToC (inj₂ b))
+
+exp-suma-from : {A B C : Set} → ((A → C) × (B → C)) → ((A ⊎ B) → C)
+exp-suma-from (aToC , bToC) = λ { (inj₁ a) → aToC a ; (inj₂ b) → bToC b }
+
+aux1 : {A B C : Set} -> 
+    (aUnionBToC : A ⊎ B -> C) -> (aUnionB : A ⊎ B) ->
+    exp-suma-from (exp-suma-to aUnionBToC) aUnionB ≡ aUnionBToC aUnionB
+aux1 aUnionBToC (inj₁ a) = refl
+aux1 aUnionBToC (inj₂ b) = refl
+
+-- aux1 : {A B C : Set} -> 
+--     (aUnionBToC : A ⊎ B -> C) -> (aUnionB : A ⊎ B) ->
+--     exp-suma-from (exp-suma-to aUnionBToC) aUnionB ≡ aUnionBToC aUnionB
+-- aux1 aUnionBToC (inj₁ a) = refl
+-- aux1 aUnionBToC (inj₂ b) = refl
+
 
 exp-suma : {A B C : Set} → ((A ⊎ B) → C) ≃ ((A → C) × (B → C))
-exp-suma = {!!}
+exp-suma ._≃_.to = exp-suma-to
+exp-suma ._≃_.from = exp-suma-from
+exp-suma ._≃_.from∘to aUnionBToC    = extensionalidad-funcional (aux1 aUnionBToC)
+exp-suma ._≃_.to∘from (aToC , bToC) = refl
 
 exp-producto : {A B C : Set} → ((A × B) → C) ≃ (A → B → C)
-exp-producto = {!!}
+exp-producto ._≃_.to a,bToC = (λ a -> λ b -> a,bToC (a , b))
+exp-producto ._≃_.from abToC = (λ (a , b) -> abToC a b)
+exp-producto ._≃_.from∘to = (λ a,bToC -> refl)
+exp-producto ._≃_.to∘from = (λ abToC -> refl)
 
 -- B.5) Demostrar la generalización dependiente:
 
@@ -249,7 +303,10 @@ exp-producto-dep : {A : Set} {B : A → Set} {C : (a : A) → B a → Set}
                           → ((p : Σ[ a ∈ A ] B a) → C (proj₁ p) (proj₂ p))
                             ≃
                             ((a : A) (b : B a) → C a b)
-exp-producto-dep = {!!}
+exp-producto-dep ._≃_.to pToC = (λ a -> λ b -> pToC (a , b))
+exp-producto-dep ._≃_.from abToC = (λ (a , b) -> abToC a b )
+exp-producto-dep ._≃_.from∘to pToC = refl
+exp-producto-dep ._≃_.to∘from abToC = refl
 
 -- Parte C --
 
