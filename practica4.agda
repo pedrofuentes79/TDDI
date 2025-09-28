@@ -355,7 +355,32 @@ compile (e-add e₁ e₂) = (compile e₁ ++ compile e₂) ++ (i-add ∷ [])
 
 -- Demostrar que el compilador es correcto:
 
+lema-run-++ : {xs ys : List Instr} {stack : List ℕ} -> run (xs ++ ys) stack ≡ run xs (run ys stack) 
+lema-run-++ = ?  
+
+lema-run-compile : {e b : Expr} -> run (compile e) (eval b ∷ []) ≡ (eval e + eval b) ∷ []
+lema-run-compile {e-const x} {b} = ?
+lema-run-compile {e-add y z} {b} = ?
+
 compile-correct : {e : Expr}
                 → run (compile e) [] ≡ eval e ∷ []
-compile-correct = {!!}
+compile-correct {e-const x} = refl
+compile-correct {e-add e e₁} = 
+    begin 
+        run (compile (e-add e e₁)) []
+    ≡⟨ refl ⟩ 
+        run ((compile e ++ compile e₁) ++ (i-add ∷ [])) []
+    ≡⟨ lema-run-++ {xs = (compile e ++ compile e₁)} {ys = (i-add ∷ [])} {stack = []}⟩ 
+        run (compile e ++ compile e₁) (run (i-add ∷ []) [])
+    ≡⟨ cong (λ z -> run (compile e ++ compile e₁) z ) refl ⟩ 
+        run (compile e ++ compile e₁) []
+    ≡⟨ lema-run-++ {xs = compile e} {ys = compile e₁} {stack = []} ⟩ 
+        run (compile e) (run (compile e₁) [])
+    ≡⟨ cong (λ z -> run (compile e) z ) (compile-correct {e₁}) ⟩ 
+        run (compile e) (eval e₁ ∷ [])
+    ≡⟨ lema-run-compile {e} {e₁} ⟩ 
+        (eval e + eval e₁) ∷ []
+    ≡⟨ sym refl ⟩ 
+        eval (e-add e e₁) ∷ []
+    ∎
 
