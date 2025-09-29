@@ -39,6 +39,18 @@ _++_ : {A : Set} → List A → List A → List A
 []       ++ ys = ys
 (x ∷ xs) ++ ys = x ∷ (xs ++ ys)
 
+++-[] : {A : Set} {xs : List A} -> xs ++ [] ≡ xs
+++-[] {A} {[]} = refl
+++-[] {A} {x ∷ xs} =
+    begin
+        (x ∷ xs) ++ []
+    ≡⟨ refl ⟩
+        x ∷ (xs ++ [])
+    ≡⟨ cong (λ z -> x ∷ z) (++-[] {A} {xs}) ⟩
+        x ∷ xs
+    ∎  
+
+
 -- A.1) Demostrar que map conmuta con la concatenación:
 map-++ : {A B : Set} {f : A → B} {xs ys : List A}
        → map f (xs ++ ys) ≡ map f xs ++ map f ys
@@ -355,30 +367,86 @@ compile (e-add e₁ e₂) = (compile e₁ ++ compile e₂) ++ (i-add ∷ [])
 
 -- Demostrar que el compilador es correcto:
 
-lema-run-++ : {xs ys : List Instr} {stack : List ℕ} -> run (xs ++ ys) stack ≡ run xs (run ys stack) 
-lema-run-++ = ?  
+-- para este lema seguimos la estructura de la definicion inductiva de `run`
+lema-run-++ : {xs ys : List Instr} {stack : List ℕ} -> run (xs ++ ys) stack ≡ run ys (run xs stack)
+lema-run-++ {[]} {ys} {stack} = refl
+lema-run-++ {i-push n ∷ xs} {ys} {stack} = 
+    begin
+        run ((i-push n ∷ xs) ++ ys) stack
+    ≡⟨ refl ⟩ 
+        run ((i-push n) ∷ (xs ++ ys)) stack
+    ≡⟨ refl ⟩ 
+        run (xs ++ ys) (n ∷ stack)
+    ≡⟨ lema-run-++ {xs} {ys} {n ∷ stack}⟩ 
+        run ys (run xs (n ∷ stack) )
+    ≡⟨ refl ⟩ 
+        run ys (run (i-push n ∷ xs) stack)
+    ∎
+lema-run-++ {i-add ∷ xs} {ys} {[]} =
+    begin
+        run ((i-add ∷ xs) ++ ys) []
+    ≡⟨ refl ⟩ 
+        run (xs ++ ys) []
+    ≡⟨ lema-run-++ {xs} {ys} {[]} ⟩ 
+        run ys (run xs [])
+    ≡⟨ sym refl ⟩ 
+        run ys (run (i-add ∷ xs) [])    
+    ∎
+lema-run-++ {i-add ∷ xs} {ys} {n ∷ []} = 
+    begin
+        run ((i-add ∷ xs) ++ ys) (n ∷ [])
+    ≡⟨ refl ⟩
+        run (xs ++ ys) (n ∷ []) 
+    ≡⟨ lema-run-++ {xs} {ys} {n ∷ []} ⟩
+        run ys (run (i-add ∷ xs) (n ∷ [])) 
+    ∎
 
-lema-run-compile : {e b : Expr} -> run (compile e) (eval b ∷ []) ≡ (eval e + eval b) ∷ []
-lema-run-compile {e-const x} {b} = ?
-lema-run-compile {e-add y z} {b} = ?
+lema-run-++ {i-add ∷ xs} {ys} {n ∷ (m ∷ stack)} = 
+    begin
+        run ((i-add ∷ xs) ++ ys) (n ∷ (m ∷ stack))
+    ≡⟨ refl ⟩ 
+        run (xs ++ ys) ((m + n) ∷ stack)
+    ≡⟨ lema-run-++ {xs} {ys} {(m + n) ∷ stack} ⟩ 
+        run ys (run xs ((m + n) ∷ stack))
+    ≡⟨ cong (λ z -> run ys z) (sym refl) ⟩ 
+        run ys (run (i-add ∷ xs) (n ∷ (m ∷ stack)))
+    ∎
 
-compile-correct : {e : Expr}
-                → run (compile e) [] ≡ eval e ∷ []
+lema-run-compile : {e : Expr} {stack : List ℕ} -> run (compile e) stack ≡ eval e ∷ stack
+lema-run-compile {e-const x} {stack} = refl
+lema-run-compile {e-add e e₁} {stack} = 
+    begin
+        run (compile (e-add e e₁)) stack
+    ≡⟨ refl ⟩
+        run ((compile e ++ compile e₁) ++ (i-add ∷ [])) stack
+    ≡⟨ lema-run-++ {compile e ++ compile e₁} ⟩
+        run (i-add ∷ []) (run (compile e ++ compile e₁) stack)
+    ≡⟨ cong (λ z -> run (i-add ∷ []) z) (lema-run-++ {compile e})⟩
+        run (i-add ∷ []) (run (compile e₁) (run (compile e) stack))
+    ≡⟨ cong (λ z -> run (i-add ∷ []) (run (compile e₁) z)) (lema-run-compile {e})⟩
+        run (i-add ∷ []) (run (compile e₁) (eval e ∷ stack))
+    ≡⟨ cong (λ z -> run (i-add ∷ []) z) (lema-run-compile {e₁})⟩
+        run (i-add ∷ []) (eval e₁ ∷ (eval e ∷ stack))
+    ≡⟨ refl ⟩
+        eval (e-add e e₁) ∷ stack
+    ∎
+
+compile-correct : {e : Expr} → run (compile e) [] ≡ eval e ∷ []
 compile-correct {e-const x} = refl
 compile-correct {e-add e e₁} = 
     begin 
         run (compile (e-add e e₁)) []
     ≡⟨ refl ⟩ 
         run ((compile e ++ compile e₁) ++ (i-add ∷ [])) []
-    ≡⟨ lema-run-++ {xs = (compile e ++ compile e₁)} {ys = (i-add ∷ [])} {stack = []}⟩ 
-        run (compile e ++ compile e₁) (run (i-add ∷ []) [])
-    ≡⟨ cong (λ z -> run (compile e ++ compile e₁) z ) refl ⟩ 
-        run (compile e ++ compile e₁) []
-    ≡⟨ lema-run-++ {xs = compile e} {ys = compile e₁} {stack = []} ⟩ 
-        run (compile e) (run (compile e₁) [])
-    ≡⟨ cong (λ z -> run (compile e) z ) (compile-correct {e₁}) ⟩ 
-        run (compile e) (eval e₁ ∷ [])
-    ≡⟨ lema-run-compile {e} {e₁} ⟩ 
+    ≡⟨ lema-run-++ {(compile e ++ compile e₁)} ⟩
+        run (i-add ∷ []) (run (compile e ++ compile e₁) [])
+    ≡⟨ cong (λ z -> run (i-add ∷ []) z) (lema-run-++ {compile e}) ⟩
+        run (i-add ∷ []) (run (compile e₁) (run (compile e) []))
+    ≡⟨ cong (λ z -> run (i-add ∷ []) (run (compile e₁) z)) (lema-run-compile {e}) ⟩
+        run (i-add ∷ []) (run (compile e₁) (eval e ∷ []))
+    ≡⟨ cong (λ z -> run (i-add ∷ []) z) (lema-run-compile {e₁}) ⟩
+        run (i-add ∷ []) (eval e₁ ∷ (eval e ∷ []))
+    ≡⟨ refl ⟩ 
         (eval e + eval e₁) ∷ []
     ≡⟨ sym refl ⟩ 
         eval (e-add e e₁) ∷ []
