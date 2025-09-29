@@ -194,8 +194,8 @@ refl ⁻¹ = refl
 -- demostrar la siguiente propiedad de conmutación entre la composición de caminos y
 -- la inversa:
 
-aux : {A : Set} {x y z : A} {p : x ≡ y} {q : y ≡ z} -> (((p ∙ q) ⁻¹) ⁻¹) ∙ (((q ⁻¹) ∙ (p ⁻¹))) ≡ refl
-aux {A} {x} {y} {z} {p} {q} =
+∙-⁻¹-comm-aux : {A : Set} {x y z : A} {p : x ≡ y} {q : y ≡ z} -> (((p ∙ q) ⁻¹) ⁻¹) ∙ (((q ⁻¹) ∙ (p ⁻¹))) ≡ refl
+∙-⁻¹-comm-aux {A} {x} {y} {z} {p} {q} =
     begin
        (((p ∙ q) ⁻¹) ⁻¹) ∙ ((q ⁻¹) ∙ (p ⁻¹))
     ≡⟨ cong (λ z -> z ∙ ((q ⁻¹) ∙ (p ⁻¹)) ) (⁻¹-involutive) ⟩
@@ -219,7 +219,7 @@ aux {A} {x} {y} {z} {p} {q} =
         ((p ∙ q) ⁻¹)
     ≡⟨ sym (⁻¹-involutive {p = (p ∙ q) ⁻¹}) ⟩
         (((((p ∙ q) ⁻¹) ⁻¹)) ⁻¹)
-    ≡⟨ sym (⁻¹-univ-right {A} {x} {z} {x} {p = ((p ∙ q) ⁻¹) ⁻¹} {q = (q ⁻¹) ∙ (p ⁻¹)} (aux)) ⟩
+    ≡⟨ sym (⁻¹-univ-right {A} {x} {z} {x} {p = ((p ∙ q) ⁻¹) ⁻¹} {q = (q ⁻¹) ∙ (p ⁻¹)} (∙-⁻¹-comm-aux)) ⟩
         (q ⁻¹) ∙ (p ⁻¹)
     ∎
 
@@ -231,6 +231,10 @@ aux {A} {x} {y} {z} {p} {q} =
 _+bit_ : Bool → ℕ → ℕ
 false +bit n = n
 true  +bit n = suc n
+
++bit-suc : {n : ℕ} {b : Bool} -> suc (b +bit n) ≡ b +bit (suc n)
++bit-suc {n} {false} = refl
++bit-suc {n} {true} = refl
 
 -- Consideramos el siguiente tipo de datos para codificar naturales en binario:
 data Bin : Set where
@@ -307,13 +311,40 @@ nat2bin2nat (suc n) =
         suc n
     ∎
 
+double-suc-distributive : {q : ℕ} -> suc (suc (q + q)) ≡ suc q + suc q
+double-suc-distributive {q} = 
+    begin
+        suc (suc (q + q))
+    ≡⟨ cong suc refl ⟩
+        suc (suc q + q)
+    ≡⟨ cong suc (+-comm (suc q) q) ⟩
+        suc (q + suc q)
+    ≡⟨ refl ⟩
+        suc q + suc q 
+    ∎
+
+aux2 : {n q : ℕ} {r : Bool} -> n ≡ r +bit (q + q) -> suc (suc n) ≡ r +bit (suc q + suc q)
+aux2 {n} {q} {r} dem = 
+    begin
+        suc (suc n)
+    ≡⟨ cong (λ z -> suc (suc z)) dem ⟩
+        suc (suc (r +bit (q + q)))
+    ≡⟨ cong suc (+bit-suc {q + q} {r}) ⟩ 
+        suc (r +bit (suc (q + q)))
+    ≡⟨ +bit-suc {suc (q + q)} {r} ⟩ 
+        r +bit (suc (suc (q + q)))
+    ≡⟨ cong (λ z -> r +bit z) double-suc-distributive ⟩ 
+        r +bit (suc q + suc q) 
+    ∎
+
 -- B.5) Definir la siguiente función, que descompone un número natural en su cociente y su resto
 -- en la división por 2:
 divmod2 : (n : ℕ) → Σ[ q ∈ ℕ ] Σ[ r ∈ Bool ] n ≡ r +bit (q + q)
-divmod2 zero          = {!!}
-divmod2 (suc zero)    = {!!}
+divmod2 zero          = (zero , false , refl)
+divmod2 (suc zero)    = (zero , true , refl)
+--n≡q+q+r' es de tipo n ≡ (r' +bit (q' + q'))
 divmod2 (suc (suc n)) = let (q' , r' , n≡q+q+r') = divmod2 n in
-                          {!!}
+                          (suc q' , r' , aux2 n≡q+q+r')
 
 ---- Parte C ----
 
@@ -379,13 +410,6 @@ sumaFin-comm {zero} {m} finZero (finSuc y) =
     begin
         sumaFin finZero (finSuc y)
     ≡⟨ {!   !}  ⟩ 
-        transport (λ _ -> Fin (zero + suc m)) (+-comm zero (suc m)) (finSuc (sumaFin y finZero))
-    ≡⟨ {!   !}  ⟩ 
         transport Fin (+-comm m zero) (sumaFin (finSuc y) finZero)
     ∎
 sumaFin-comm {(suc n)} {m} (finSuc x) y = {!   !}
-    -- begin
-    --     sumaFin x y 
-    -- ≡⟨ {!   !} ⟩
-    --     transport Fin (+-comm m n) (sumaFin y x)
-    -- ∎ 
