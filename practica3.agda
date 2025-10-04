@@ -401,15 +401,30 @@ sumaFin : {n m : ℕ} → Fin n → Fin m → Fin (n + m)
 -- sumaFin {n} {m} (finSuc x) (finSuc y) = transport (λ z -> Fin (n + m)) (+-comm m n) (finSuc (sumaFin x y))
 
 sumaFin {n} {m} finZero    y = y
-sumaFin {n} {m} (finSuc x) y = transport (λ z -> Fin (n + m)) (+-comm m n) (finSuc (sumaFin x y))
+sumaFin {n} {m} (finSuc x) y = transport (λ _ -> Fin (n + m)) (+-comm m n) (finSuc (sumaFin x y))
 
 -- D.2) Demostrar que la suma es conmutativa:
 sumaFin-comm : {n m : ℕ} (x : Fin n) (y : Fin m) → sumaFin x y ≡ transport Fin (+-comm m n) (sumaFin y x)
 sumaFin-comm finZero finZero = refl
+-- +-comm m zero devuelve m + zero ≡ m. Luego transport Fin (+-comm m zero) es la "identidad" de elementos de Fin m
 sumaFin-comm {zero} {m} finZero (finSuc y) = 
     begin
         sumaFin finZero (finSuc y)
-    ≡⟨ {!   !}  ⟩ 
+    ≡⟨ refl ⟩ 
+        finSuc y 
+    ≡⟨ ? ⟩
+        ?
+    ≡⟨ sym (transport-∙ Fin (+-comm zero m) (+-comm m zero) (finSuc (sumaFin y finZero))) ⟩ 
+        transport Fin (+-comm m zero) (transport (λ _ -> Fin (m + zero)) (+-comm zero m) (finSuc (sumaFin y finZero)))
+    ≡⟨ sym refl ⟩ 
         transport Fin (+-comm m zero) (sumaFin (finSuc y) finZero)
     ∎
-sumaFin-comm {(suc n)} {m} (finSuc x) y = {!   !}
+
+sumaFin-comm {(suc n)} {m} (finSuc x) y = 
+    begin
+        sumaFin (finSuc x) y
+    ≡⟨ refl ⟩ 
+        transport (λ _ -> Fin (suc n + m)) (+-comm m (suc n)) (finSuc (sumaFin x y))
+    ≡⟨ {!   !} ⟩ 
+        transport Fin (+-comm m (suc n)) (sumaFin y (finSuc x))
+    ∎
