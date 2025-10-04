@@ -13,6 +13,8 @@ open import Data.Nat.Properties using (≤-step; ≤-refl; ≤-trans; +-monoʳ-�
 open import Relation.Nullary using (Dec; yes; no; ¬_)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq.≡-Reasoning
+open import Data.Empty using (⊥)
+open import Relation.Binary.PropositionalEquality using (subst)
 
 -- Recordemos la definición de algunas funciones básicas sobre listas:
 
@@ -58,74 +60,55 @@ data _∈_ : ℕ → List ℕ → Set where
   zero : {x : ℕ} {xs : List ℕ} → x ∈ (x ∷ xs)
   suc  : {x y : ℕ} {xs : List ℕ} → x ∈ xs → x ∈ (y ∷ xs)
 
+no-number-is-in-[] : {x : ℕ} -> x ∈ [] -> ⊥
+no-number-is-in-[] ()
+
+-- TODO: simplificar esto? es medio feo
+no-list-with-one-element-is-[]-1 : {A : Set} {x : A} {xs : List A} -> x ∷ xs ≡ [] -> ⊥
+no-list-with-one-element-is-[]-1 ()
+
+no-list-with-one-element-is-[]-2 : {A : Set} {x : A} {xs : List A} -> [] ≡ x ∷ xs -> ⊥
+no-list-with-one-element-is-[]-2 ()
+
+x-∉-y∷ys : {x y : ℕ} {ys : List ℕ} -> ¬ (x ≡ y) -> ¬ (x ∈ ys) -> (x ∈ (y ∷ ys)) -> ⊥
+x-∉-y∷ys x≠y x∉ys zero       = x≠y refl
+x-∉-y∷ys x≠y x∉ys (suc x∈ys) = x∉ys x∈ys
+
 -- A.2) Demostrar que es posible decidir si un número natural aparece en una lista.
 -- (Usar _≟_ para decidir la igualdad de números naturales).
 
 ∈-decidible : {x : ℕ} {ys : List ℕ} → Dec (x ∈ ys)
-∈-decidible = {!!}
+∈-decidible {x} {[]} = no (no-number-is-in-[])
+∈-decidible {x} {y ∷ ys} with x ≟ y
+... | yes x≡y = yes (subst (_∈ (y ∷ ys)) (sym x≡y) (zero {y} {ys}))
+... | no x!≡y with ∈-decidible {x} {ys}
+... | yes x∈ys = yes (suc x∈ys)
+... | no x∉ys  = no (x-∉-y∷ys x!≡y x∉ys)
 
 -- A.3) Demostrar que la igualdad de listas es decidible
 -- asumiendo que es decidible la igualdad de sus elementos.
 
+list-eq-∷ : {A : Set} {x y : A} {xs ys : List A} -> x ≡ y -> xs ≡ ys -> x ∷ xs ≡ y ∷ ys
+list-eq-∷ refl refl = refl
+
 List-igualdad-decidible : {A : Set}
                         → ((x y : A) → Dec (x ≡ y))
                         → ((xs ys : List A) → Dec (xs ≡ ys))
-List-igualdad-decidible dec-eq-A xs ys = {!!}
-
----- Parte B ----
-
-infix  3 _~_
-infix  3 _<<_
-infixr 3 _~⟨_⟩_
-infix  4 _~∎
-
--- Considerar el siguiente tipo de las permutaciones:
-
-data _~_ : List ℕ → List ℕ → Set where
-  ~-empty : [] ~ []
-  ~-cons  : {x : ℕ} {xs ys : List ℕ}
-          → xs ~ ys
-          → x ∷ xs ~ x ∷ ys
-  ~-swap  : {x y : ℕ} {xs ys : List ℕ}
-          → xs ~ ys
-          → x ∷ y ∷ xs ~ y ∷ x ∷ ys
-  ~-trans : {xs ys zs : List ℕ}
-          → xs ~ ys
-          → ys ~ zs
-          → xs ~ zs
-
--- B.1) Demostrar que "~" es reflexiva:
-
-~-refl : {xs : List ℕ} → xs ~ xs
-~-refl = {!!}
-
--- Definimos operadores auxiliares para poder hacer razonamiento ecuacional
--- con permutaciones:
-
-_~⟨_⟩_ : (xs : List ℕ)
-       → {ys : List ℕ} → xs ~ ys
-       → {zs : List ℕ} → ys ~ zs
-       → xs ~ zs
-_ ~⟨ p ⟩ q = ~-trans p q
-
-_~∎ : (xs : List ℕ) → xs ~ xs
-_ ~∎ = ~-refl
-
--- B.2) Demostrar que "~" es simétrica:
-
-~-sym : {xs ys : List ℕ} → xs ~ ys → ys ~ xs
-~-sym ~-empty       = {!!}
-~-sym (~-cons p)    = {!!}
-~-sym (~-swap p)    = {!!}
-~-sym (~-trans p q) = {!!}
-
--- B.3) Demostrar que "~" es una congruencia con respecto a la concatenación de listas:
-
-~-++ : {xs ys xs' ys' : List ℕ}
-     → xs ~ xs'
-     → ys ~ ys'
-     → xs ++ ys ~ xs' ++ ys'
-~-++ p q = {!!}
+List-igualdad-decidible dec-eq-A [] []             = yes refl
+List-igualdad-decidible dec-eq-A (x ∷ xs) []       = no no-list-with-one-element-is-[]-1
+List-igualdad-decidible dec-eq-A [] (y ∷ ys)       = no no-list-with-one-element-is-[]-2
+List-igualdad-decidible dec-eq-A (x ∷ xs) (y ∷ ys) with dec-eq-A x y
+... | no x≠y  = no (λ {refl -> x≠y refl})
+... | yes x≡y with List-igualdad-decidible dec-eq-A xs ys
+  = ~-cons (~-++ p q)
+~-++ (~-swap p) q = ~-swap (~-++ p q)
+~-++ {xs} {ys} {xs'} {ys'} (~-trans p p₁) q = 
+    xs ++ ys
+  ~⟨ ~-++ ~-refl q ⟩
+    xs ++ ys'
+  ~⟨ {!   !} ⟩
+    xs' ++ ys'  
+  ~∎
 
 -- B.4) Demostrar que una lista invertida es permutación de la lista original:
 
