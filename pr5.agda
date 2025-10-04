@@ -22,6 +22,10 @@ _++_ : {A : Set} → List A → List A → List A
 []       ++ ys = ys
 (x ∷ xs) ++ ys = x ∷ (xs ++ ys)
 
+++-[] : {A : Set} {xs : List A} -> xs ++ [] ≡ xs
+++-[] {A} {[]} = refl
+++-[] {A} {x ∷ xs} = cong (λ z -> x ∷ z) (++-[])
+
 length : {A : Set} → List A → ℕ
 length []       = zero
 length (_ ∷ xs) = suc (length xs)
@@ -157,13 +161,49 @@ _ ~∎ = ~-refl
      → xs ~ xs'
      → ys ~ ys'
      → xs ++ ys ~ xs' ++ ys'
-~-++ (~-empty) q = q
-~-++ (~-cons p) q = ~-cons (~-++ p q) 
-~-++ (~-swap p) q = ~-swap (~-++ p q)
+~-++ (~-empty) q      = q
+~-++ (~-cons p) q     = ~-cons (~-++ p q) 
+~-++ (~-swap p) q     = ~-swap (~-++ p q)
 ~-++ (~-trans p p₁) q = ~-trans (~-++ p q) (~-++ p₁ ~-refl)
 
 
 -- B.4) Demostrar que una lista invertida es permutación de la lista original:
+
+~-++-[] : {xs : List ℕ} → xs ~ xs ++ []
+~-++-[] {[]}     = ~-refl
+~-++-[] {x ∷ xs} = ~-cons (~-++-[])
+
+~-++-comm : {xs ys : List ℕ} -> xs ++ ys ~ ys ++ xs
+~-++-comm {[]} {[]} = ~-refl
+~-++-comm {[]} {y ∷ ys} = 
+    [] ++ (y ∷ ys)
+  ~⟨ ~-refl ⟩  
+    y ∷ ys
+  ~⟨ ~-++-[] ⟩  
+    (y ∷ ys) ++ []     
+  ~∎
+~-++-comm {x ∷ xs} {[]} = 
+    (x ∷ xs) ++ []
+  ~⟨ ~-sym (~-++-[]) ⟩ 
+    x ∷ xs
+  ~⟨ ~-refl ⟩ 
+    [] ++ (x ∷ xs)
+  ~∎
+~-++-comm {x ∷ xs} {y ∷ ys} = 
+   (x ∷ xs) ++ (y ∷ ys) 
+  ~⟨ ~-refl ⟩ 
+    x ∷ (xs ++ (y ∷ ys))
+ ~⟨ ~-cons (~-++-comm {xs} {y ∷ ys}) ⟩ 
+    x ∷ ((y ∷ ys) ++ xs)
+  ~⟨ ~-refl ⟩ 
+    x ∷ y ∷ (ys ++ xs)
+  ~⟨ ~-swap (~-sym (~-++-comm {xs} {ys})) ⟩ 
+    y ∷ ((x ∷ (xs ++ ys)))
+  ~⟨ ~-cons (~-++-comm {x ∷ xs} {ys}) ⟩ 
+    y ∷ (ys ++ (x ∷ xs))
+  ~⟨ ~-refl ⟩ 
+    (y ∷ ys) ++ (x ∷ xs)
+  ~∎
 
 ~-reverse : {xs : List ℕ} → reverse xs ~ xs
 ~-reverse {[]}     = ~-empty
@@ -171,9 +211,9 @@ _ ~∎ = ~-refl
     reverse (x ∷ xs)
   ~⟨ ~-refl ⟩
     reverse xs ++ (x ∷ [])
-  ~⟨ {!!} ⟩
+  ~⟨ ~-++ {reverse xs} {x ∷ []} {xs} {x ∷ []} (~-reverse {xs}) ~-refl ⟩
     xs ++ (x ∷ [])
-  ~⟨ {!!} ⟩
+  ~⟨ ~-++-comm {xs} {x ∷ []} ⟩ 
     x ∷ xs
   ~∎
 
@@ -201,19 +241,19 @@ xs << ys = (z : ℕ) → cantidad-apariciones z xs ≤ cantidad-apariciones z ys
 -- B.5) Demostrar las siguientes propiedades de "<<":
 
 <<-empty : [] << []
-<<-empty = {!!}
+<<-empty z = ≤-refl 
 
 <<-refl : {xs : List ℕ} → xs << xs
-<<-refl z = {!!}    -- útil: Data.Nat.Properties.≤-refl 
+<<-refl z = ≤-refl    -- útil: Data.Nat.Properties.≤-refl 
 
 <<-cons : {x : ℕ} {xs ys : List ℕ} → xs << ys → x ∷ xs << x ∷ ys
-<<-cons {x} xs<<ys z = {!!}    -- útil:   +-monoʳ-≤ (iguales? z x) ?
+<<-cons {x} xs<<ys z = +-monoʳ-≤ (iguales? z x) (xs<<ys z)
 
 <<-swap : {x y : ℕ} {xs ys : List ℕ} → xs << ys → x ∷ y ∷ xs << y ∷ x ∷ ys
-<<-swap xs<<ys z = {!!}    -- útil: Data.Nat.Properties.+-monoʳ-≤
+<<-swap {x} {y} xs<<ys z = +-monoʳ-≤ {!   !} {!   !} 
 
 <<-trans : {xs ys zs : List ℕ} → xs << ys → ys << zs → xs << zs
-<<-trans xs<<ys ys<<zs z = {!!}    -- útil: Data.Nat.Properties.≤-trans
+<<-trans xs<<ys ys<<zs z = ≤-trans (xs<<ys z) (ys<<zs z)
 
 -- B.6) Usando los lemas de B.5, demostrar que la relación "~" es
 -- correcta con respecto a "<<".
@@ -221,7 +261,7 @@ xs << ys = (z : ℕ) → cantidad-apariciones z xs ≤ cantidad-apariciones z ys
 ~-correcta : {xs ys : List ℕ}
            → xs ~ ys 
            → xs << ys 
-~-correcta ~-empty       = {!!}
-~-correcta (~-cons p)    = {!!}
-~-correcta (~-swap p)    = {!!}
-~-correcta (~-trans p q) = {!!}
+~-correcta ~-empty        = <<-empty
+~-correcta (~-cons {x} {xs} {ys} p)     = <<-cons (~-correcta {xs} {ys} p)
+~-correcta (~-swap {x} {y} {xs} {ys} p)     = <<-swap (~-correcta {xs} {ys} p)
+~-correcta (~-trans {xs} {ys} {zs} p q)  = <<-trans (~-correcta {xs} {ys} p) (~-correcta {ys} {zs} q)
