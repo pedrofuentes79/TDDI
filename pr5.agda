@@ -100,15 +100,68 @@ List-igualdad-decidible dec-eq-A [] (y ∷ ys)       = no no-list-with-one-eleme
 List-igualdad-decidible dec-eq-A (x ∷ xs) (y ∷ ys) with dec-eq-A x y
 ... | no x≠y  = no (λ {refl -> x≠y refl})
 ... | yes x≡y with List-igualdad-decidible dec-eq-A xs ys
-  = ~-cons (~-++ p q)
+... | yes xs≡ys = yes (list-eq-∷ x≡y xs≡ys)
+... | no  xs≠ys = no (λ {refl -> xs≠ys refl})
+
+---- Parte B ----
+
+infix  3 _~_
+infix  3 _<<_
+infixr 3 _~⟨_⟩_
+infix  4 _~∎
+
+-- Considerar el siguiente tipo de las permutaciones:
+
+data _~_ : List ℕ → List ℕ → Set where
+  ~-empty : [] ~ []
+  ~-cons  : {x : ℕ} {xs ys : List ℕ}
+          → xs ~ ys
+          → x ∷ xs ~ x ∷ ys
+  ~-swap  : {x y : ℕ} {xs ys : List ℕ}
+          → xs ~ ys
+          → x ∷ y ∷ xs ~ y ∷ x ∷ ys
+  ~-trans : {xs ys zs : List ℕ}
+          → xs ~ ys
+          → ys ~ zs
+          → xs ~ zs
+
+-- B.1) Demostrar que "~" es reflexiva:
+
+~-refl : {xs : List ℕ} → xs ~ xs
+~-refl {[]} = ~-empty
+~-refl {x ∷ xs} = ~-cons ~-refl
+
+-- Definimos operadores auxiliares para poder hacer razonamiento ecuacional
+-- con permutaciones:
+
+_~⟨_⟩_ : (xs : List ℕ)
+       → {ys : List ℕ} → xs ~ ys
+       → {zs : List ℕ} → ys ~ zs
+       → xs ~ zs
+_ ~⟨ p ⟩ q = ~-trans p q
+
+_~∎ : (xs : List ℕ) → xs ~ xs
+_ ~∎ = ~-refl
+
+-- B.2) Demostrar que "~" es simétrica:
+
+~-sym : {xs ys : List ℕ} → xs ~ ys → ys ~ xs
+~-sym ~-empty       = ~-empty
+~-sym (~-cons p)    = ~-cons (~-sym p)
+~-sym (~-swap p)    = ~-swap (~-sym p)
+~-sym (~-trans p q) = ~-trans (~-sym q) (~-sym p)
+
+-- B.3) Demostrar que "~" es una congruencia con respecto a la concatenación de listas:
+
+~-++ : {xs ys xs' ys' : List ℕ}
+     → xs ~ xs'
+     → ys ~ ys'
+     → xs ++ ys ~ xs' ++ ys'
+~-++ (~-empty) q = q
+~-++ (~-cons p) q = ~-cons (~-++ p q) 
 ~-++ (~-swap p) q = ~-swap (~-++ p q)
-~-++ {xs} {ys} {xs'} {ys'} (~-trans p p₁) q = 
-    xs ++ ys
-  ~⟨ ~-++ ~-refl q ⟩
-    xs ++ ys'
-  ~⟨ {!   !} ⟩
-    xs' ++ ys'  
-  ~∎
+~-++ (~-trans p p₁) q = ~-trans (~-++ p q) (~-++ p₁ ~-refl)
+
 
 -- B.4) Demostrar que una lista invertida es permutación de la lista original:
 
