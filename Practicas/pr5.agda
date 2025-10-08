@@ -9,7 +9,7 @@ open import Data.List using (List; []; _∷_)
 open import Data.Product using (_×_; Σ-syntax; _,_)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Data.Nat using (ℕ; zero; suc; _+_; _≤_; _≟_)
-open import Data.Nat.Properties using (≤-step; ≤-refl; ≤-trans; +-monoʳ-≤)
+open import Data.Nat.Properties using (≤-step; ≤-refl; ≤-trans; +-monoʳ-≤; +-comm; +-assoc)
 open import Relation.Nullary using (Dec; yes; no; ¬_)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq.≡-Reasoning
@@ -250,7 +250,21 @@ xs << ys = (z : ℕ) → cantidad-apariciones z xs ≤ cantidad-apariciones z ys
 <<-cons {x} xs<<ys z = +-monoʳ-≤ (iguales? z x) (xs<<ys z)
 
 <<-swap : {x y : ℕ} {xs ys : List ℕ} → xs << ys → x ∷ y ∷ xs << y ∷ x ∷ ys
-<<-swap {x} {y} xs<<ys z = +-monoʳ-≤ {!   !} {!   !} 
+-- +-monoʳ-≤ prueba que sumar el primer numero que le pases de ambos lados de una desigualdad es lo mismo.
+-- yo quiero probar que (iguales? x z + iguales? y z) + cantidad-apariciones z xs ≤ (iguales? y z + iguales? x z) + cantidad-apariciones z ys
+<<-swap {x} {y} {xs} {ys} xs<<ys z with iguales? z x | iguales? z y
+-- qvq: 1 + (zero + cant xs) ≤ zero + (1 + cant ys)
+... | 1 | 0 = subst (λ w -> w ≤ 1 + (zero + cantidad-apariciones z ys)) (refl) (+-monoʳ-≤ 1 (xs<<ys z)) 
+... | 1 | 1 = +-monoʳ-≤ (1 + 1) (xs<<ys z)
+... | 0 | 0 = xs<<ys z
+-- qvq: zero + (1 + cant xs) ≤ 1 + (zero + cant ys)
+... | 0 | 1 = subst (λ w -> w ≤ zero + (1 + cantidad-apariciones z ys)) refl (+-monoʳ-≤ 1 (xs<<ys z))
+
+-- Esto se podria usar para reescribir la desigualdad? Y que tenga el orden que quiero
+-- subst (_≤ (iguales? z y + iguales? z x) + cantidad-apariciones z ys) (+-comm (iguales? z x) (iguales? z y)) ? 
+
+
+
 
 <<-trans : {xs ys zs : List ℕ} → xs << ys → ys << zs → xs << zs
 <<-trans xs<<ys ys<<zs z = ≤-trans (xs<<ys z) (ys<<zs z)
@@ -262,6 +276,7 @@ xs << ys = (z : ℕ) → cantidad-apariciones z xs ≤ cantidad-apariciones z ys
            → xs ~ ys 
            → xs << ys 
 ~-correcta ~-empty        = <<-empty
-~-correcta (~-cons {x} {xs} {ys} p)     = <<-cons (~-correcta {xs} {ys} p)
-~-correcta (~-swap {x} {y} {xs} {ys} p)     = <<-swap (~-correcta {xs} {ys} p)
-~-correcta (~-trans {xs} {ys} {zs} p q)  = <<-trans (~-correcta {xs} {ys} p) (~-correcta {ys} {zs} q)
+~-correcta (~-cons {x} {xs} {ys} p)     = <<-cons {x} {xs} {ys} (~-correcta {xs} {ys} p)
+~-correcta (~-swap {x} {y} {xs} {ys} p)     = <<-swap {x} {y} {xs} {ys} (~-correcta {xs} {ys} p)
+~-correcta (~-trans {xs} {ys} {zs} p q) = <<-trans (~-correcta p) (~-correcta q)
+
