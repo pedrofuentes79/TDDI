@@ -16,10 +16,6 @@ data _∈_ : ℕ -> Heap -> Set where
     ∈-left  : ∀ {k i r d} -> k ∈ i -> k ∈ bin i r d
     ∈-right : ∀ {k i r d} -> k ∈ d -> k ∈ bin i r d
 
--- data raizMenorQue (n : ℕ) : Heap -> Set where
---     rmq-nil : raizMenorQue n nil
---     rmq-bin : raizMenorQue
-
 raizMenorQue : ℕ -> Heap -> Set
 raizMenorQue n nil = ⊤
 raizMenorQue n (bin i r d) = (n ≤ r) × raizMenorQue n i × raizMenorQue n d
@@ -37,3 +33,7 @@ data HeapValido : Heap -> Set where
 -- siftUp-corrige
 -- insertar-preserva-heap
 -- extraer-max-preserva-heap
+
+insertar : ℕ -> Heap -> Heap
+insertar n nil = bin nil n nil
+insertar n (bin i r d) = {!   !}
