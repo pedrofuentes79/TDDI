@@ -46,14 +46,6 @@ size : Heap -> ℕ
 size nil = 0
 size (bin i r d) = 1 + size i + size d
 
-estaVacio : Heap -> Set
-estaVacio nil = ⊤
-estaVacio (bin i r d) = ⊥
-
-estaVacio? : (h : Heap) -> Dec (estaVacio h)
-estaVacio? nil = yes tt
-estaVacio? (bin i r d) = no (λ ())
-
 esPerfecto : Heap -> Set
 esPerfecto nil = ⊤
 esPerfecto (bin i r d) = size (bin i r d) ≡ (2 ^ (height (bin i r d))) ∸ 1
