@@ -1,5 +1,5 @@
-open import Data.Nat using (ℕ; zero; suc; _≤_; _⊔_; _+_; _^_; _∸_)
-open import Data.Nat.Properties using (_≤?_; _≟_)
+open import Data.Nat using (ℕ; zero; suc; _≤_; _⊔_; _+_; _^_; _∸_; _<_)
+open import Data.Nat.Properties using (_≤?_; _≟_; ≤-trans)
 open import Relation.Nullary using (Dec; yes; no; ¬_)
 open import Relation.Binary.PropositionalEquality using (_≡_; refl)
 open import Data.Empty using (⊥; ⊥-elim)
@@ -10,6 +10,11 @@ open import Data.Sum using (_⊎_; inj₁; inj₂)
 --auxiliares unreleated
 absurdo₁ : {a b : ℕ} -> a ≡ b -> a ≡ suc b -> ⊥
 absurdo₁ refl ()
+
+-- Caso absurdo en siftUp: r ≤ r₁ ∧ r₁ ≤ r₂ ∧ ¬(r ≤ r₂)
+-- Por transitividad: r ≤ r₁ ≤ r₂ implica r ≤ r₂, contradicción
+absurdo₂ : {r r₁ r₂ : ℕ} -> r ≤ r₁ -> r₁ ≤ r₂ -> ¬ (r ≤ r₂) -> ⊥
+absurdo₂ r≤r₁ r₁≤r₂ r₂<r = r₂<r (≤-trans r≤r₁ r₁≤r₂)
 
 -- min heap btw
 data Heap : Set where
@@ -57,18 +62,6 @@ esPerfecto? (bin i r d) = size (bin i r d) ≟ (2 ^ (height (bin i r d))) ∸ 1
 -- Esta definicion de completo toma en cuenta que se llene de izquierda a derecha.
 esCompleto : Heap -> Set
 esCompleto nil = ⊤
--- esCompleto (bin i r d) with height i ≟ height d
--- -- Caso de que tienen la misma altura. Necesito que el de la izquierda sea perfecto (este todo lleno el nivel inferior)
--- -- Y que el derecho le queden algunos por llenar (completo)
--- ... | yes i≡d = esPerfecto i × esCompleto d 
--- ... | no  _ with height i ≟ suc (height d)
--- -- Caso de que el de la derecha es UNO mas bajito que el de la izquierda. 
--- -- Esto nos dice que el de la izquierda aun no se lleno. 
--- -- Por lo tanto, tenemos que pedir que el de la derecha sea perfecto (si no, hubiese estado mal empezar a llenar a la izq)
--- -- Y que el de la izquierda este completo
--- ... | yes i≡d+1 = esCompleto i × esPerfecto d 
--- -- Este caso no entra en ninguno de los establecidos. Por lo tanto, no es completo
--- ... | no  _ = ⊥
 esCompleto (bin i r d) = 
   (height i ≡ height d × esPerfecto i × esCompleto d) ⊎ 
   (height i ≡ suc (height d) × esCompleto i × esPerfecto d)
@@ -92,6 +85,7 @@ esCompleto? (bin i r d) with height i ≟ height d | esPerfecto? i | esCompleto?
 -- Caso: alturas incorrectas
 ... | no ¬eq | _         | _         | no ¬eq' | _         | _         = no λ { (inj₁ (eq , _ , _)) -> ¬eq eq ; (inj₂ (eq' , _ , _)) -> ¬eq' eq' }
 
+
 data HeapValido : Heap -> Set where
     heap-nil : HeapValido nil
     heap-bin : ∀ {i r d} -> HeapValido i -> HeapValido d -> 
@@ -103,10 +97,33 @@ data HeapCompleto : Heap -> Set where
     completo-bin : ∀ h -> esCompleto h -> HeapCompleto h
                 
 
--- Corrige el heap elevando hacia arriba el elemento insertado. (hasta donde le corresponda estar)
+
+-- Corrige el heap elevando hacia arriba el elemento insertado. 
+-- La corrección es "local". Es decir, no investiga más allá de la raíz actual.
 siftUp : Heap -> Heap
 siftUp nil = nil
-siftUp (bin i r d) = {!   !}
+siftUp (bin nil r nil) = bin nil r nil
+siftUp (bin nil r (bin i₁ r₁ d₁)) with r ≤? r₁
+... | yes p = bin nil r  (bin i₁ r₁ d₁)
+... | no p  = bin nil r₁ (bin i₁ r  d₁)
+siftUp (bin (bin i₁ r₁ d₁) r nil) with r ≤? r₁
+... | yes p = bin (bin i₁ r₁ d₁) r nil
+... | no  p = bin (bin i₁ r d₁) r₁ nil
+siftUp (bin (bin i₁ r₁ d₁) r (bin i₂ r₂ d₂)) with r ≤? r₁ | r ≤? r₂ | r₁ ≤? r₂
+-- r es el mínimo
+... | yes r≤r₁ | yes r≤r₂ | _         = bin (bin i₁ r₁ d₁) r (bin i₂ r₂ d₂)
+-- ABSURDO (r ≤ r₁ ∧ r₂ < r ∧ r₁ ≤ r₂ → r₁ ≤ r₂ < r ≤ r₁)
+... | yes r≤r₁ | no  r₂<r  | yes r₁≤r₂ = ⊥-elim (absurdo₂ r≤r₁ r₁≤r₂ r₂<r)
+-- r₂ es el mínimo (r₂ < r ∧ r₂ < r₁)
+... | yes r≤r₁ | no  r₂<r | no  r₂<r₁ = bin (bin i₁ r₁ d₁) r₂ (bin i₂ r d₂)
+-- r₁ es el mínimo (r₁ < r ≤ r₂ ∧ r₁ ≤ r₂)
+... | no  r₁<r | yes r≤r₂ | yes r₁≤r₂ = bin (bin i₁ r d₁) r₁ (bin i₂ r₂ d₂)
+-- r es el mínimo (r < r₁, r ≤ r₂ < r₁ → r ≤ r₂ < r₁)
+... | no  r₁<r | yes r≤r₂ | no  r₂<r₁ = bin (bin i₁ r₁ d₁) r (bin i₂ r₂ d₂)
+-- r₁ es el mínimo (r₁ < r ∧ r₂ < r ∧ r₁ ≤ r₂)
+... | no  r₁<r | no  r₂<r | yes r₁≤r₂ = bin (bin i₁ r d₁) r₁ (bin i₂ r₂ d₂)
+-- r₂ es el mínimo (r₁ < r ∧ r₂ < r ∧ r₂ < r₁)
+... | no  r₁<r | no  r₂<r | no  r₂<r₁ = bin (bin i₁ r₁ d₁) r₂ (bin i₂ r d₂)
 
 
 insertar : ℕ -> Heap -> Heap
@@ -114,3 +131,6 @@ insertar n nil = bin nil n nil
 insertar n (bin i r d) with esCompleto? i
 ... | yes p = siftUp (bin i r (insertar n d))
 ... | no  p = siftUp (bin (insertar n i) r d)
+
+
+-- insertar-preserva-invariante : ∀ {x h} -> HeapValido
