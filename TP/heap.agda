@@ -96,6 +96,11 @@ data HeapCompleto : Heap -> Set where
     completo-nil : HeapCompleto nil
     completo-bin : ∀ h -> esCompleto h -> HeapCompleto h
                 
+record EsHeap (h : Heap) : Set where
+    field
+        valido   : HeapValido h
+        completo : HeapCompleto h
+
 
 
 -- Corrige el heap elevando hacia arriba el elemento insertado. 
@@ -132,5 +137,19 @@ insertar n (bin i r d) with esCompleto? i
 ... | yes p = siftUp (bin i r (insertar n d))
 ... | no  p = siftUp (bin (insertar n i) r d)
 
+-- Para tenerla cerca
+-- data HeapValido : Heap -> Set where
+--     heap-nil : HeapValido nil
+--     heap-bin : ∀ {i r d} -> HeapValido i -> HeapValido d -> 
+--                raizMenorQueHijos (bin i r d) ->  
+--                HeapValido (bin i r d)
 
--- insertar-preserva-invariante : ∀ {x h} -> HeapValido
+
+
+-- La idea aca es demostrar que, dados dos heaps validos i, d,  y un entero r, siftUp los combina para hacer un
+-- Heap  valido
+siftUp-corrige : ∀ {i r d} -> HeapValido i  -> HeapValido d -> HeapValido (siftUp (bin i r d))
+siftUp-corrige {nil} {r} {nil}                  heap-nil heap-nil = 
+    heap-bin heap-nil heap-nil tt 
+siftUp-corrige {nil} {r} {(bin _ _ _)} heap-nil (heap-bin b b₁ x) = {!   !}
+siftUp-corrige {(bin _ _ _)} {r} {d}          (heap-bin a a₁ x) b = {!   !}
