@@ -21,10 +21,10 @@ data Heap : Set where
     nil : Heap
     bin : Heap -> ℕ -> Heap -> Heap
 
-data _∈_ : ℕ -> Heap -> Set where
-    ∈-raiz  : ∀ {i r d} -> r ∈ bin i r d
-    ∈-left  : ∀ {k i r d} -> k ∈ i -> k ∈ bin i r d
-    ∈-right : ∀ {k i r d} -> k ∈ d -> k ∈ bin i r d
+-- data _∈_ : ℕ -> Heap -> Set where
+--     ∈-raiz  : ∀ {i r d} -> r ∈ bin i r d
+--     ∈-left  : ∀ {k i r d} -> k ∈ i -> k ∈ bin i r d
+--     ∈-right : ∀ {k i r d} -> k ∈ d -> k ∈ bin i r d
 
 -- Verifica que la raíz de un heap sea menor o igual que sus hijos directos
 -- Queda simple si separamos en casos.
@@ -51,6 +51,7 @@ size : Heap -> ℕ
 size nil = 0
 size (bin i r d) = 1 + size i + size d
 
+-- un heap es perfecto si todos sus niveles estan llenos (incluso el de abajo)
 esPerfecto : Heap -> Set
 esPerfecto nil = ⊤
 esPerfecto (bin i r d) = size (bin i r d) ≡ (2 ^ (height (bin i r d))) ∸ 1
@@ -149,7 +150,6 @@ insertar n (bin i r d) with esCompleto? i
 -- La idea aca es demostrar que, dados dos heaps validos i, d,  y un entero r, siftUp los combina para hacer un
 -- Heap  valido
 siftUp-corrige : ∀ {i r d} -> HeapValido i  -> HeapValido d -> HeapValido (siftUp (bin i r d))
-siftUp-corrige {nil} {r} {nil}                  heap-nil heap-nil = 
-    heap-bin heap-nil heap-nil tt 
-siftUp-corrige {nil} {r} {(bin _ _ _)} heap-nil (heap-bin b b₁ x) = {!   !}
+siftUp-corrige {nil} {r} {nil}                  heap-nil heap-nil = heap-bin heap-nil heap-nil tt 
+siftUp-corrige {nil} {r} {(bin i₂ r₂ d₂)} heap-nil (heap-bin i₂val d₂val rmqh) = {!   !}
 siftUp-corrige {(bin _ _ _)} {r} {d}          (heap-bin a a₁ x) b = {!   !}
