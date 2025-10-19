@@ -283,16 +283,13 @@ mutual
   -- y así unificar los tipos correctamente al hacer pattern matching en el parámetro p
   insertar-bin-aux : ∀ n i r d -> Heap (bin i r d) -> (p : Dec (esPerfecto i)) -> (q : Dec (esPerfecto d)) -> Heap (insertar-aux n i r d p q)
   -- Caso: i es nil (pero entonces el árbol sería bin nil r d, que es válido solo si d es nil también)
-  insertar-bin-aux n nil r d h p q = 
-    -- insertar-aux n nil r d p = bin nil n nil
-    {!   !}
+  insertar-bin-aux n nil r d h p q = siftUp-corrige heap-nil heap-nil (inj₁ (refl , tt , tt))
   
   -- Caso: i es perfecto, d no es perfecto -> insertamos en d
   -- tengo que demostrar que el izquierdo es Heap (facil porque no le inserto nada)
   -- que el derecho es Heap despues de haber insertado (recursion)
   -- y que es completo (en su totalidad)
   insertar-bin-aux n (bin i₁ r₁ d₁) r d h (yes iperf) (no _) = 
-    -- insertar-aux n (bin i₁ r₁ d₁) r d (yes iperf) = siftUp (bin (bin i₁ r₁ d₁) r (insertar n d))
     siftUp-corrige 
       (heap-valido-su-hijo-izq-es-valido (Heap.valido h))
       (Heap.valido (insertar-preserva-invariante {d} {n} (heap-su-hijo-der-es-heap h) ))
@@ -302,14 +299,20 @@ mutual
       
   -- Caso: ambos son perfectos -> insertamos en i
   insertar-bin-aux n (bin i₁ r₁ d₁) r d h (yes iperf) (yes dperf) = 
-    -- insertar-aux n (bin i₁ r₁ d₁) r d (yes iperf) = siftUp (bin (bin i₁ r₁ d₁) r (insertar n d))
     siftUp-corrige
       (Heap.valido (insertar-preserva-invariante {bin i₁ r₁ d₁} {n} (heap-su-hijo-izq-es-heap h)))
       (heap-valido-su-hijo-der-es-valido (Heap.valido h))
-      (inj₂ (? , ? , dperf))
+      (inj₂ ({!   !} , (extraer-esCompleto (Heap.completo (insertar-preserva-invariante {bin i₁ r₁ d₁ } {n} (heap-su-hijo-izq-es-heap h))) , dperf) ))
 
   -- Caso: i no es perfecto -> insertamos en i
-  insertar-bin-aux n (bin i₁ r₁ d₁) r d h (no ¬iperf) _ = 
+  insertar-bin-aux n (bin i₁ r₁ d₁) r d h (no ¬iperf) (yes dperf) = 
     -- insertar-aux n (bin i₁ r₁ d₁) r d (no ¬iperf) = siftUp (bin (insertar n (bin i₁ r₁ d₁)) r d)
-    --siftUp-corrige 
-      {!   !} 
+    siftUp-corrige
+      (Heap.valido (insertar-preserva-invariante {bin i₁ r₁ d₁} {n} (heap-su-hijo-izq-es-heap h)))
+      (heap-valido-su-hijo-der-es-valido (Heap.valido h))
+      (inj₂ ({!   !} , (extraer-esCompleto (Heap.completo (insertar-preserva-invariante {bin i₁ r₁ d₁} {n} (heap-su-hijo-izq-es-heap h)))) , dperf))
+
+  -- Este caso es absurdo. h no seria un heap. A partir de aca tenemos que sacar algun absurdo
+  -- Deberia salir facil, en la demo de que h es completo tenemos que iperf o que dperf.
+  insertar-bin-aux n (bin i₁ r₁ d₁) r d h (no ¬iperf) (no ¬dperf) = {!   !}
+       
