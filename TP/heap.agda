@@ -8,9 +8,7 @@ open import Data.Product using (_×_; _,_; ∃-syntax; proj₁; proj₂)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Function using (case_of_)
 
-
-
---auxiliares unreleated
+--auxiliares 
 absurdo₁ : {a b : ℕ} -> a ≡ b -> a ≡ suc b -> ⊥
 absurdo₁ refl ()
 
@@ -32,7 +30,7 @@ zero-no-es-suc ()
 absurdo₂ : {r r₁ r₂ : ℕ} -> r ≤ r₁ -> r₁ ≤ r₂ -> ¬ (r ≤ r₂) -> ⊥
 absurdo₂ r≤r₁ r₁≤r₂ r₂<r = r₂<r (≤-trans r≤r₁ r₁≤r₂)
 
--- min heap btw
+-- definimos una estructura base de arbol binario
 data AB : Set where
     nil : AB
     bin : AB -> ℕ -> AB -> AB 
@@ -46,12 +44,9 @@ raizMenorQueHijos (bin (bin i r₁ d) r nil) = r ≤ r₁
 raizMenorQueHijos (bin nil r (bin i r₁ d)) = r ≤ r₁
 raizMenorQueHijos (bin (bin i₁ r₁ d₁) r (bin i₂ r₂ d₂)) = (r ≤ r₁) × (r ≤ r₂)
 
--- queda definir "extraerMax" (que viene de la mano con siftDown)
--- y definir insertar (que usa siftUp)
+-- queda definir "extraerMax" (que viene de la mano con siftDown?)
 -- Propiedades
 -- siftDown-corrige
--- siftUp-corrige
--- insertar-preserva-heap
 -- extraer-max-preserva-heap
 
 height : AB -> ℕ
@@ -62,7 +57,7 @@ size : AB -> ℕ
 size nil = 0
 size (bin i r d) = 1 + size i + size d
 
--- Definición inductiva: un árbol es perfecto si ambos subárboles tienen la misma altura y son perfectos
+-- un árbol es perfecto si ambos subárboles tienen la misma altura y son perfectos
 esPerfecto : AB -> Set
 esPerfecto nil = ⊤
 esPerfecto (bin i r d) = height i ≡ height d × esPerfecto i × esPerfecto d
@@ -79,7 +74,8 @@ esPerfecto? (bin i r d) with height i ≟ height d | esPerfecto? i | esPerfecto?
 esCompleto : AB -> Set
 esCompleto nil = ⊤
 esCompleto (bin i r d) = 
-  (height i ≡ height d       × esPerfecto i × esCompleto d) ⊎ 
+  (height i ≡ height d       × esPerfecto i × esCompleto d) 
+  ⊎ 
   (height i ≡ suc (height d) × esCompleto i × esPerfecto d)
 
 esCompleto? : (h : AB) -> Dec (esCompleto h)
@@ -202,7 +198,7 @@ mutual
 
   -- Función auxiliar que hace explícita la decisión de esPerfecto
   insertar-aux : ∀ n (i : AB) r d -> Dec (esPerfecto i) -> Dec (esPerfecto d) -> AB
-  insertar-aux n nil _ _ _ _ = bin nil n nil  -- caso base cuando hacemos recursión en i
+  insertar-aux n nil _ _ _ _ = bin nil   -- caso base cuando hacemos recursión en i
   -- Caso 1: d es perfecto → insertamos en i 
   insertar-aux n (bin i₁ r₁ d₁) r d _           (yes dperf) = siftUp (bin (insertar n (bin i₁ r₁ d₁)) r d)
   -- Caso 2: d no es perfecto, i es perfecto → insertamos en d
@@ -256,11 +252,11 @@ siftUp-preserva-validez {nil} {r} {bin i₂ r₂ d₂} hi hd with r ≤? r₂
 ... | no  r>r₂ = {!   !} 
 siftUp-preserva-validez {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} hi hd with r ≤? r₁ | r ≤? r₂ | r₁ ≤? r₂
 -- r es el mínimo
-... | yes r≤r₁ | yes r≤r₂ | _         = heap-bin {!   !} {!   !} {!   !} 
+... | yes r≤r₁ | yes r≤r₂ | _         = heap-bin hi hd (r≤r₁ , r≤r₂)
 -- ABSURDO
 ... | yes r≤r₁ | no  r₂<r  | yes r₁≤r₂ = ⊥-elim (absurdo₂ r≤r₁ r₁≤r₂ r₂<r)
 -- r₂ es el mínimo (r₂ < r ≤ r₁)
-... | yes r≤r₁ | no  r₂<r | no  r₂<r₁  = {!   !} 
+... | yes r≤r₁ | no  r₂<r | no  r₂<r₁  = heap-bin hi (heap-bin (heap-valido-su-hijo-izq-es-valido hd) (heap-valido-su-hijo-der-es-valido hd) ({!   !}) ) (≤-trans (>-es-≤ r₂<r) r≤r₁ , (>-es-≤ r₂<r))
 -- r₁ es el mínimo (r₁ < r ≤ r₂ ∧ r₁ ≤ r₂)
 ... | no  r₁<r | yes r≤r₂ | yes r₁≤r₂ = {!   !} 
 -- r es el mínimo (r < r₁, r ≤ r₂ < r₁)
