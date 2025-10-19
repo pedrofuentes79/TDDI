@@ -133,10 +133,15 @@ heap-valido-con-raiz-aun-menor-es-valido {nil} {r} {bin i₃ r₃ d₃} {r₁} (
 heap-valido-con-raiz-aun-menor-es-valido {bin i₂ r₂ d₂} {r} {nil} {r₁} (heap-bin ival dval rmqh) r₁≤r       = (≤-trans r₁≤r rmqh)
 heap-valido-con-raiz-aun-menor-es-valido {bin i₂ r₂ d₂} {r} {bin i₃ r₃ d₃} {r₁} (heap-bin ival dval (r≤r₂ , r≤r₃)) r₁≤r = (≤-trans r₁≤r r≤r₂ , ≤-trans r₁≤r r≤r₃)
 
+extraer-esCompleto : ∀ {h} -> HeapCompleto h -> esCompleto h
+extraer-esCompleto completo-nil = tt
+extraer-esCompleto (completo-bin h comp) = comp
 
+heap-su-hijo-izq-es-heap : ∀ {i r d} -> Heap (bin i r d) -> Heap i
+heap-su-hijo-izq-es-heap {i} {r} {d} h = {!   !}
 
-
-
+heap-su-hijo-der-es-heap : ∀ {i r d} -> Heap (bin i r d) -> Heap d
+heap-su-hijo-der-es-heap {i} {r} {d} h = {!   !}
 -- Corrige el heap elevando hacia arriba el elemento insertado. 
 -- La corrección es "local". Es decir, no investiga más allá de la raíz actual.
 siftUp : AB -> AB
@@ -165,11 +170,17 @@ siftUp (bin (bin i₁ r₁ d₁) r (bin i₂ r₂ d₂)) with r ≤? r₁ | r �
 ... | no  r₁<r | no  r₂<r | no  r₂<r₁ = bin (bin i₁ r₁ d₁) r₂ (bin i₂ r d₂)
 
 
-insertar : ℕ -> AB -> AB
-insertar n nil = bin nil n nil
-insertar n (bin i r d) with esCompleto? i
-... | yes p = siftUp (bin i r (insertar n d))
-... | no  p = siftUp (bin (insertar n i) r d)
+mutual
+  insertar : ℕ -> AB -> AB
+  insertar n nil = bin nil n nil
+  insertar n (bin i r d) = insertar-aux n i r d (esPerfecto? i) (esPerfecto? d)
+
+  -- Función auxiliar que hace explícita la decisión de esPerfecto
+  insertar-aux : ∀ n (i : AB) r d -> Dec (esPerfecto i) -> Dec (esPerfecto d) -> AB
+  insertar-aux n nil _ _ _ _ = bin nil n nil  -- caso base cuando hacemos recursión en i
+  insertar-aux n (bin i₁ r₁ d₁) r d (yes iperf) (no _)      = siftUp (bin (bin i₁ r₁ d₁) r (insertar n d))
+  insertar-aux n (bin i₁ r₁ d₁) r d (yes iperf) (yes dperf) = siftUp (bin (insertar n (bin i₁ r₁ d₁)) r d)
+  insertar-aux n (bin i₁ r₁ d₁) r d (no  _    ) _           = siftUp (bin (insertar n (bin i₁ r₁ d₁)) r d)
 
 
 es-nil-es-valido : ∀ {i} -> esNil i -> HeapValido i
@@ -190,7 +201,7 @@ completo-bin-nil-aux {i₁} {r₁} {d₁} {r} (inj₂ (hi≡suc_heightnil , _ , 
 extraer-completo-izq : ∀ {i₁ r₁ d₁ r} -> esCompleto (bin (bin i₁ r₁ d₁) r nil) -> esCompleto (bin i₁ r₁ d₁)
 extraer-completo-izq (inj₁ (() , _ , _))
 extraer-completo-izq (inj₂ (_ , inj₁ (hi≡hd , iperf , dcomp) , _)) = inj₁ (hi≡hd , iperf , dcomp)
-extraer-completo-izq (inj₂ (_ , inj₂ (hi≡suchd , icomp , dperf) , _)) = inj₂ (hi≡suchd , icomp , dperf)
+extraer-completo-izq (inj₂ (_ , inj₂ (hi≡hd+1 , icomp , dperf) , _)) = inj₂ (hi≡hd+1 , icomp , dperf)
 
 -- Auxiliares para extraer que los hijos son nil
 hijo-izq-nil-de-altura-1 : ∀ {i r d} -> height (bin i r d) ≡ 1 -> esNil i
@@ -205,79 +216,100 @@ hijo-der-nil-de-altura-1 {nil} {r} {bin i₂ r₂ d₂} ()
 hijo-der-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {nil} ()
 hijo-der-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} ()
 
--- La idea aca es demostrar que, dados dos heaps validos i, d,  y un entero r, siftUp los combina para hacer un
--- -- Heap  valido
-siftUp-corrige : ∀ {i r d} -> Heap i -> Heap d -> esCompleto (bin i r d) -> Heap (siftUp (bin i r d))
--- CASO IZQ Y DER NULOS
-siftUp-corrige {nil} {r} {nil} hi hd comp = record 
-  { valido = heap-bin heap-nil heap-nil tt
-  ; completo = completo-bin (bin nil r nil) (inj₁ (refl , tt , tt ))
-  }
-
--- CASO EL DE LA IZQUIERDA NO ES NULO
-siftUp-corrige {bin i₁ r₁ d₁} {r} {nil} hi hd comp with r ≤? r₁ | esNil? i₁ | esNil? d₁
-... | yes r≤r₁ | yes i₁nil | yes d₁nil   = record 
-  { valido   = heap-bin (heap-bin (es-nil-es-valido i₁nil) (es-nil-es-valido d₁nil) (raiz-es-menor-que-nil i₁nil d₁nil)) 
-                        heap-nil 
-                        r≤r₁
-  ; completo = completo-bin (bin (bin i₁ r₁ d₁) r nil) (inj₂ (completo-bin-nil-aux {i₁} {r₁} {d₁} {r} comp , extraer-completo-izq {i₁} {r₁} {d₁} {r} comp , tt))
-  }
-... | no  r>r₁ | yes i₁nil | yes d₁nil = record 
-  { valido = heap-bin (heap-bin (es-nil-es-valido i₁nil) (es-nil-es-valido d₁nil) (raiz-es-menor-que-nil i₁nil d₁nil))
-             heap-nil 
-             (>-es-≤ r>r₁)
-  ; completo = completo-bin (bin (bin i₁ r d₁) r₁ nil) (inj₂ (completo-bin-nil-aux {i₁} {r} {d₁} {r₁} comp , extraer-completo-izq {i₁} {r} {d₁} {r} comp , tt))
-  }
--- Estos casos son imposibles: dado que es completo, el arbol de la izquierda solo puede tener un nodo
--- Esos holes los deberia llenar llegando a que esNil i₁ se desprende de hi + comp
-... | _ | no i₁notnil | _  = ⊥-elim (i₁notnil (hijo-izq-nil-de-altura-1 {i₁} {r₁} {d₁} (completo-bin-nil-aux {i₁} {r₁} {d₁} {r} comp )))
-... | _ | _  | no d₁notnil = ⊥-elim (d₁notnil (hijo-der-nil-de-altura-1 {i₁} {r₁} {d₁} (completo-bin-nil-aux {i₁} {r₁} {d₁} {r} comp )))
-
--- CASO EL DE LA DERECHA NO ES NULO
--- Este caso deberia ser imposible
-siftUp-corrige {nil} {r} {bin nil r₂ nil} hi hd (inj₁ (zero≡suc , _ , _ )) = ⊥-elim (zero-no-es-suc zero≡suc)
-siftUp-corrige {nil} {r} {bin nil r₂ nil} hi hd (inj₂ (zero≡suc , _ , _ )) = ⊥-elim (zero-no-es-suc zero≡suc)
-
--- Caso general
-siftUp-corrige {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} hi hd comp with r ≤? r₁ | r ≤? r₂ | r₁ ≤? r₂
+-- LEMA 1: siftUp preserva la validez del heap
+-- Si los subárboles i y d son heaps válidos, entonces siftUp corrige la violación en la raíz
+siftUp-preserva-validez : ∀ {i r d} -> HeapValido i -> HeapValido d -> HeapValido (siftUp (bin i r d))
+siftUp-preserva-validez {nil} {r} {nil} hi hd = heap-bin heap-nil heap-nil tt
+siftUp-preserva-validez {bin i₁ r₁ d₁} {r} {nil} hi hd with r ≤? r₁
+... | yes r≤r₁ = heap-bin hi heap-nil r≤r₁
+... | no  r>r₁ = heap-bin {!   !} heap-nil {!   !}
+siftUp-preserva-validez {nil} {r} {bin i₂ r₂ d₂} hi hd with r ≤? r₂
+... | yes r≤r₂ = {!   !}
+... | no  r>r₂ = {!   !} 
+siftUp-preserva-validez {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} hi hd with r ≤? r₁ | r ≤? r₂ | r₁ ≤? r₂
 -- r es el mínimo
-... | yes r≤r₁ | yes r≤r₂ | _         = record 
-  { valido = heap-bin (Heap.valido hi) (Heap.valido hd) (r≤r₁ , r≤r₂)
-  ; completo = completo-bin (bin (bin i₁ r₁ d₁) r (bin i₂ r₂ d₂)) comp
-  }
--- ABSURDO (r ≤ r₁ ∧ r₂ < r ∧ r₁ ≤ r₂ → r₁ ≤ r₂ < r ≤ r₁)
+... | yes r≤r₁ | yes r≤r₂ | _         = {!   !}
+-- ABSURDO
 ... | yes r≤r₁ | no  r₂<r  | yes r₁≤r₂ = ⊥-elim (absurdo₂ r≤r₁ r₁≤r₂ r₂<r)
--- r₂ es el mínimo (r₂ < r ∧ r₂ < r₁)
-... | yes r≤r₁ | no  r₂<r | no  r₂<r₁  = record
-    { valido = heap-bin 
-                  (Heap.valido hi) 
-                  (heap-bin 
-                      (heap-valido-su-hijo-izq-es-valido (Heap.valido hd))
-                      (heap-valido-su-hijo-der-es-valido (Heap.valido hd)) 
-                      -- porque el hole es (raizMenorQueHijos (bin i₂ r d₂))??? no valdria siempre, no?
-                      ? --(heap-valido-con-raiz-aun-menor-es-valido {i₂} {r₂} {d₂} {r} (Heap.valido hd) ?)
-                  ) 
-                  (<-es-≤ r₂<r₁ , <-es-≤ r₂<r)
-    ; completo = completo-bin  
-                      (bin (bin i₁ r₁ d₁) r₂ (bin i₂ r d₂)) 
-                      comp
-    }
+-- r₂ es el mínimo (r₂ < r ≤ r₁)
+... | yes r≤r₁ | no  r₂<r | no  r₂<r₁  = {!   !} 
 -- r₁ es el mínimo (r₁ < r ≤ r₂ ∧ r₁ ≤ r₂)
-... | no  r₁<r | yes r≤r₂ | yes r₁≤r₂ = {!   !}
--- r es el mínimo (r < r₁, r ≤ r₂ < r₁ → r ≤ r₂ < r₁)
+... | no  r₁<r | yes r≤r₂ | yes r₁≤r₂ = {!   !} 
+-- r es el mínimo (r < r₁, r ≤ r₂ < r₁)
 ... | no  r₁<r | yes r≤r₂ | no  r₂<r₁ = {!   !}
 -- r₁ es el mínimo (r₁ < r ∧ r₂ < r ∧ r₁ ≤ r₂)
 ... | no  r₁<r | no  r₂<r | yes r₁≤r₂ = {!   !}
 -- r₂ es el mínimo (r₁ < r ∧ r₂ < r ∧ r₂ < r₁)
 ... | no  r₁<r | no  r₂<r | no  r₂<r₁ = {!   !}
 
+-- LEMA 2: siftUp preserva la estructura (no cambia la forma del árbol, solo intercambia valores)
+-- Por lo tanto, si bin i r d es completo, siftUp (bin i r d) también es completo
+-- siftUp solo intercambia valores, no cambia la estructura
+siftUp-preserva-estructura : ∀ {i r d} -> esCompleto (bin i r d) -> esCompleto (siftUp (bin i r d))
+siftUp-preserva-estructura {nil} {r} {nil} comp = inj₁ (refl , tt , tt)
+siftUp-preserva-estructura {bin i₁ r₁ d₁} {r} {nil} comp with r ≤? r₁
+... | yes r≤r₁ = comp
+... | no  r>r₁ = comp
+siftUp-preserva-estructura {nil} {r} {bin i₂ r₂ d₂} comp with r ≤? r₂
+... | yes r≤r₂ = comp
+... | no  r>r₂ = comp
+siftUp-preserva-estructura {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} comp with r ≤? r₁ | r ≤? r₂ | r₁ ≤? r₂
+... | yes r≤r₁ | yes r≤r₂ | _          = comp
+... | yes r≤r₁ | no  r₂<r  | yes r₁≤r₂ = ⊥-elim (absurdo₂ r≤r₁ r₁≤r₂ r₂<r)
+... | yes r≤r₁ | no  r₂<r | no  r₂<r₁  = comp
+... | no  r₁<r | yes r≤r₂ | yes r₁≤r₂  = comp
+... | no  r₁<r | yes r≤r₂ | no  r₂<r₁  = comp
+... | no  r₁<r | no  r₂<r | yes r₁≤r₂  = comp
+... | no  r₁<r | no  r₂<r | no  r₂<r₁  = comp
 
-insertar-preserva-invariante : ∀ {h n} -> Heap h -> Heap (insertar n h)
-insertar-preserva-invariante {nil} {n} k = record
-  { valido = {!   !} 
-  ; completo = {!   !} 
+-- TEOREMA: Combinando ambos lemas, siftUp convierte un árbol con subárboles válidos en un heap válido y completo
+siftUp-corrige : ∀ {i r d} -> HeapValido i -> HeapValido d -> esCompleto (bin i r d) -> Heap (siftUp (bin i r d))
+siftUp-corrige {i} {r} {d} hvi hvd comp = record 
+  { valido = siftUp-preserva-validez hvi hvd 
+  ; completo = completo-bin (siftUp (bin i r d)) (siftUp-preserva-estructura comp)
   }
-insertar-preserva-invariante {bin i r d} {n} k = record
-  { valido = {!   !} 
-  ; completo = {!   !} 
-  }
+
+mutual
+  insertar-preserva-invariante : ∀ {h n} -> Heap h -> Heap (insertar n h)
+  insertar-preserva-invariante {nil} {n} _ = record
+    { valido = heap-bin heap-nil heap-nil tt 
+    ; completo = completo-bin (bin nil n nil) (inj₁ (refl , tt , tt))
+    }
+  insertar-preserva-invariante {bin i r d} {n} h = insertar-bin-aux n i r d h (esPerfecto? i) (esPerfecto? d)
+
+  -- FUNCION AUXILIAR PARA QUE UNIFIQUE Heap (insertar n (bin i r d))
+  -- Recibe explícitamente el resultado de (esPerfecto? i) para que Agda pueda reducir
+  -- insertar n (bin i r d) = insertar-aux n i r d (esPerfecto? i)
+  -- y así unificar los tipos correctamente al hacer pattern matching en el parámetro p
+  insertar-bin-aux : ∀ n i r d -> Heap (bin i r d) -> (p : Dec (esPerfecto i)) -> (q : Dec (esPerfecto d)) -> Heap (insertar-aux n i r d p q)
+  -- Caso: i es nil (pero entonces el árbol sería bin nil r d, que es válido solo si d es nil también)
+  insertar-bin-aux n nil r d h p q = 
+    -- insertar-aux n nil r d p = bin nil n nil
+    {!   !}
+  
+  -- Caso: i es perfecto, d no es perfecto -> insertamos en d
+  -- tengo que demostrar que el izquierdo es Heap (facil porque no le inserto nada)
+  -- que el derecho es Heap despues de haber insertado (recursion)
+  -- y que es completo (en su totalidad)
+  insertar-bin-aux n (bin i₁ r₁ d₁) r d h (yes iperf) (no _) = 
+    -- insertar-aux n (bin i₁ r₁ d₁) r d (yes iperf) = siftUp (bin (bin i₁ r₁ d₁) r (insertar n d))
+    siftUp-corrige 
+      (heap-valido-su-hijo-izq-es-valido (Heap.valido h))
+      (Heap.valido (insertar-preserva-invariante {d} {n} (heap-su-hijo-der-es-heap h) ))
+      -- por ahi tenemos que separar en casos en los que (height i ≡ height d) (es decir, d ya tenía algo en su ultimo nivel, y por ende insertar no le cambia la altura, ya que d no era perfecto)
+      -- y el caso de que (height i ≡ height d + 1) (porque d tenia el ultimo nivel vacio, entonces insertar le suma uno de altura)
+      (inj₁ ({!   !} , iperf , (extraer-esCompleto (Heap.completo (insertar-preserva-invariante {d} {n} (heap-su-hijo-der-es-heap h))))) )
+      
+  -- Caso: ambos son perfectos -> insertamos en i
+  insertar-bin-aux n (bin i₁ r₁ d₁) r d h (yes iperf) (yes dperf) = 
+    -- insertar-aux n (bin i₁ r₁ d₁) r d (yes iperf) = siftUp (bin (bin i₁ r₁ d₁) r (insertar n d))
+    siftUp-corrige
+      (Heap.valido (insertar-preserva-invariante {bin i₁ r₁ d₁} {n} (heap-su-hijo-izq-es-heap h)))
+      (heap-valido-su-hijo-der-es-valido (Heap.valido h))
+      (inj₂ (? , ? , dperf))
+
+  -- Caso: i no es perfecto -> insertamos en i
+  insertar-bin-aux n (bin i₁ r₁ d₁) r d h (no ¬iperf) _ = 
+    -- insertar-aux n (bin i₁ r₁ d₁) r d (no ¬iperf) = siftUp (bin (insertar n (bin i₁ r₁ d₁)) r d)
+    --siftUp-corrige 
+      {!   !} 
