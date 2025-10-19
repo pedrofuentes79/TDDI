@@ -6,6 +6,8 @@ open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Unit using (⊤; tt)
 open import Data.Product using (_×_; _,_; ∃-syntax)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
+open import Function using (case_of_)
+
 
 
 --auxiliares unreleated
@@ -19,6 +21,11 @@ zero-no-es-suc ()
 >-es-≤ {a} {b} a>b with ≤-total a b
 ... | inj₁ a≤b = ⊥-elim (a>b a≤b)
 ... | inj₂ b≤a = b≤a
+
+<-es-≤ : {a b : ℕ} -> (b ≤ a -> ⊥) -> a ≤ b
+<-es-≤ {a} {b} a<b with ≤-total a b
+... | inj₁ a≤b = a≤b
+... | inj₂ b≤a = ⊥-elim (a<b b≤a)
 
 -- Caso absurdo en siftUp: r ≤ r₁ ∧ r₁ ≤ r₂ ∧ ¬(r ≤ r₂)
 -- Por transitividad: r ≤ r₁ ≤ r₂ implica r ≤ r₂, contradicción
@@ -113,6 +120,20 @@ record Heap (a : AB) : Set where
     field
         valido   : HeapValido a
         completo : HeapCompleto a
+
+heap-valido-su-hijo-izq-es-valido : ∀ {i r d} -> HeapValido (bin i r d) -> HeapValido i
+heap-valido-su-hijo-izq-es-valido (heap-bin ival _ _ ) = ival
+
+heap-valido-su-hijo-der-es-valido : ∀ {i r d} -> HeapValido (bin i r d) -> HeapValido d
+heap-valido-su-hijo-der-es-valido (heap-bin _ dval _) = dval
+
+heap-valido-con-raiz-aun-menor-es-valido : ∀ {i r d r₁} -> HeapValido (bin i r d) -> r₁ ≤ r -> raizMenorQueHijos (bin i r₁ d)
+heap-valido-con-raiz-aun-menor-es-valido {nil} {r} {nil} {r₁} (heap-bin ival dval rmqh) r₁≤r                = tt
+heap-valido-con-raiz-aun-menor-es-valido {nil} {r} {bin i₃ r₃ d₃} {r₁} (heap-bin ival dval rmqh) r₁≤r       = (≤-trans r₁≤r rmqh)
+heap-valido-con-raiz-aun-menor-es-valido {bin i₂ r₂ d₂} {r} {nil} {r₁} (heap-bin ival dval rmqh) r₁≤r       = (≤-trans r₁≤r rmqh)
+heap-valido-con-raiz-aun-menor-es-valido {bin i₂ r₂ d₂} {r} {bin i₃ r₃ d₃} {r₁} (heap-bin ival dval (r≤r₂ , r≤r₃)) r₁≤r = (≤-trans r₁≤r r≤r₂ , ≤-trans r₁≤r r≤r₃)
+
+
 
 
 
@@ -218,10 +239,38 @@ siftUp-corrige {nil} {r} {bin nil r₂ nil} hi hd (inj₁ (zero≡suc , _ , _ ))
 siftUp-corrige {nil} {r} {bin nil r₂ nil} hi hd (inj₂ (zero≡suc , _ , _ )) = ⊥-elim (zero-no-es-suc zero≡suc)
 
 -- Caso general
-siftUp-corrige {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} hi hd comp = record 
-  { valido = {!   !} 
-  ; completo = {!   !} 
+siftUp-corrige {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} hi hd comp with r ≤? r₁ | r ≤? r₂ | r₁ ≤? r₂
+-- r es el mínimo
+... | yes r≤r₁ | yes r≤r₂ | _         = record 
+  { valido = heap-bin (Heap.valido hi) (Heap.valido hd) (r≤r₁ , r≤r₂)
+  ; completo = completo-bin (bin (bin i₁ r₁ d₁) r (bin i₂ r₂ d₂)) comp
   }
+-- ABSURDO (r ≤ r₁ ∧ r₂ < r ∧ r₁ ≤ r₂ → r₁ ≤ r₂ < r ≤ r₁)
+... | yes r≤r₁ | no  r₂<r  | yes r₁≤r₂ = ⊥-elim (absurdo₂ r≤r₁ r₁≤r₂ r₂<r)
+-- r₂ es el mínimo (r₂ < r ∧ r₂ < r₁)
+... | yes r≤r₁ | no  r₂<r | no  r₂<r₁  = record
+    { valido = heap-bin 
+                  (Heap.valido hi) 
+                  (heap-bin 
+                      (heap-valido-su-hijo-izq-es-valido (Heap.valido hd))
+                      (heap-valido-su-hijo-der-es-valido (Heap.valido hd)) 
+                      -- porque el hole es (raizMenorQueHijos (bin i₂ r d₂))??? no valdria siempre, no?
+                      ? --(heap-valido-con-raiz-aun-menor-es-valido {i₂} {r₂} {d₂} {r} (Heap.valido hd) ?)
+                  ) 
+                  (<-es-≤ r₂<r₁ , <-es-≤ r₂<r)
+    ; completo = completo-bin  
+                      (bin (bin i₁ r₁ d₁) r₂ (bin i₂ r d₂)) 
+                      comp
+    }
+-- r₁ es el mínimo (r₁ < r ≤ r₂ ∧ r₁ ≤ r₂)
+... | no  r₁<r | yes r≤r₂ | yes r₁≤r₂ = {!   !}
+-- r es el mínimo (r < r₁, r ≤ r₂ < r₁ → r ≤ r₂ < r₁)
+... | no  r₁<r | yes r≤r₂ | no  r₂<r₁ = {!   !}
+-- r₁ es el mínimo (r₁ < r ∧ r₂ < r ∧ r₁ ≤ r₂)
+... | no  r₁<r | no  r₂<r | yes r₁≤r₂ = {!   !}
+-- r₂ es el mínimo (r₁ < r ∧ r₂ < r ∧ r₂ < r₁)
+... | no  r₁<r | no  r₂<r | no  r₂<r₁ = {!   !}
+
 
 insertar-preserva-invariante : ∀ {h n} -> Heap h -> Heap (insertar n h)
 insertar-preserva-invariante {nil} {n} k = record
