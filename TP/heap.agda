@@ -1,5 +1,5 @@
 open import Data.Nat using (ℕ; zero; suc; _≤_; _⊔_; _+_; _^_; _∸_; _<_; _>_)
-open import Data.Nat.Properties using (_≤?_; _≟_; ≤-trans)
+open import Data.Nat.Properties using (_≤?_; _≟_; ≤-trans; ≤-total)
 open import Relation.Nullary using (Dec; yes; no; ¬_)
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong)
 open import Data.Empty using (⊥; ⊥-elim)
@@ -16,7 +16,9 @@ zero-no-es-suc : {a : ℕ} -> zero ≡ suc a -> ⊥
 zero-no-es-suc ()
 
 >-es-≤ : {a b : ℕ} -> (a ≤ b -> ⊥) -> b ≤ a
->-es-≤ a>b = ?
+>-es-≤ {a} {b} a>b with ≤-total a b
+... | inj₁ a≤b = ⊥-elim (a>b a≤b)
+... | inj₂ b≤a = b≤a
 
 -- Caso absurdo en siftUp: r ≤ r₁ ∧ r₁ ≤ r₂ ∧ ¬(r ≤ r₂)
 -- Por transitividad: r ≤ r₁ ≤ r₂ implica r ≤ r₂, contradicción
@@ -203,7 +205,7 @@ siftUp-corrige {bin i₁ r₁ d₁} {r} {nil} hi hd comp with r ≤? r₁ | esNi
   { valido = heap-bin (heap-bin (es-nil-es-valido i₁nil) (es-nil-es-valido d₁nil) (raiz-es-menor-que-nil i₁nil d₁nil))
              heap-nil 
              (>-es-≤ r>r₁)
-  ; completo = {!   !}
+  ; completo = completo-bin (bin (bin i₁ r d₁) r₁ nil) (inj₂ (completo-bin-nil-aux {i₁} {r} {d₁} {r₁} comp , extraer-completo-izq {i₁} {r} {d₁} {r} comp , tt))
   }
 -- Estos casos son imposibles: dado que es completo, el arbol de la izquierda solo puede tener un nodo
 -- Esos holes los deberia llenar llegando a que esNil i₁ se desprende de hi + comp
