@@ -4,7 +4,7 @@ open import Relation.Nullary using (Dec; yes; no; ¬_)
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong)
 open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Unit using (⊤; tt)
-open import Data.Product using (_×_; _,_; ∃-syntax)
+open import Data.Product using (_×_; _,_; ∃-syntax; proj₁; proj₂)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Function using (case_of_)
 
@@ -62,14 +62,18 @@ size : AB -> ℕ
 size nil = 0
 size (bin i r d) = 1 + size i + size d
 
--- un heap es perfecto si todos sus niveles estan llenos (incluso el de abajo)
+-- Definición inductiva: un árbol es perfecto si ambos subárboles tienen la misma altura y son perfectos
 esPerfecto : AB -> Set
 esPerfecto nil = ⊤
-esPerfecto (bin i r d) = size (bin i r d) ≡ (2 ^ (height (bin i r d))) ∸ 1
+esPerfecto (bin i r d) = height i ≡ height d × esPerfecto i × esPerfecto d
 
 esPerfecto? : (h : AB) -> Dec (esPerfecto h)
 esPerfecto? nil = yes tt
-esPerfecto? (bin i r d) = size (bin i r d) ≟ (2 ^ (height (bin i r d))) ∸ 1
+esPerfecto? (bin i r d) with height i ≟ height d | esPerfecto? i | esPerfecto? d
+... | yes hi≡hd  | yes iperf | yes dperf = yes (hi≡hd , iperf , dperf)
+... | no  ¬hi≡hd | _         | _         = no λ { (hi≡hd , _ , _) → ¬hi≡hd hi≡hd }
+... | _          | no ¬iperf | _         = no λ { (_ , iperf , _) → ¬iperf iperf }
+... | _          | _         | no ¬dperf = no λ { (_ , _ , dperf) → ¬dperf dperf }
 
 -- Esta definicion de completo toma en cuenta que se llene de izquierda a derecha.
 esCompleto : AB -> Set
@@ -96,6 +100,13 @@ esCompleto? (bin i r d) with height i ≟ height d | esPerfecto? i | esCompleto?
 ... | no ¬eq | _         | _         | yes eq' | _         | no ¬dperf = no λ { (inj₁ (eq , _ , _)) -> ¬eq eq ; (inj₂ (_ , _ , dperf)) -> ¬dperf dperf }
 -- Caso: alturas incorrectas
 ... | no ¬eq | _         | _         | no ¬eq' | _         | _         = no λ { (inj₁ (eq , _ , _)) -> ¬eq eq ; (inj₂ (eq' , _ , _)) -> ¬eq' eq' }
+
+
+-- Con la definición inductiva de esPerfecto, esta demostración es trivial
+perfecto-implica-completo : ∀ {a} -> esPerfecto a -> esCompleto a
+perfecto-implica-completo {nil} perf = tt
+perfecto-implica-completo {bin i r d} (hi≡hd , iperf , dperf) = 
+  inj₁ (hi≡hd , iperf , perfecto-implica-completo dperf) 
 
 esNil : (h : AB) -> Set
 esNil nil = ⊤
@@ -138,10 +149,24 @@ extraer-esCompleto completo-nil = tt
 extraer-esCompleto (completo-bin h comp) = comp
 
 heap-su-hijo-izq-es-heap : ∀ {i r d} -> Heap (bin i r d) -> Heap i
-heap-su-hijo-izq-es-heap {i} {r} {d} h = {!   !}
+heap-su-hijo-izq-es-heap {i} {r} {d} h = record 
+    { valido   = (heap-valido-su-hijo-izq-es-valido (Heap.valido h)) 
+    ; completo = case (extraer-esCompleto (Heap.completo h)) of λ 
+      {
+        (inj₁ (_ , iperf , _)) -> completo-bin i (perfecto-implica-completo iperf)
+      ; (inj₂ (_ , icomp , _)) -> completo-bin i icomp 
+      }
+    }
 
 heap-su-hijo-der-es-heap : ∀ {i r d} -> Heap (bin i r d) -> Heap d
-heap-su-hijo-der-es-heap {i} {r} {d} h = {!   !}
+heap-su-hijo-der-es-heap {i} {r} {d} h = record 
+    { valido = (heap-valido-su-hijo-der-es-valido (Heap.valido h)) 
+    ; completo = case (extraer-esCompleto (Heap.completo h)) of λ 
+        { 
+          (inj₁ (_ , _ , dcomp)) -> completo-bin d dcomp
+        ; (inj₂ (_ , _ , dperf)) -> completo-bin d (perfecto-implica-completo dperf)
+        }
+    }
 -- Corrige el heap elevando hacia arriba el elemento insertado. 
 -- La corrección es "local". Es decir, no investiga más allá de la raíz actual.
 siftUp : AB -> AB
@@ -178,9 +203,12 @@ mutual
   -- Función auxiliar que hace explícita la decisión de esPerfecto
   insertar-aux : ∀ n (i : AB) r d -> Dec (esPerfecto i) -> Dec (esPerfecto d) -> AB
   insertar-aux n nil _ _ _ _ = bin nil n nil  -- caso base cuando hacemos recursión en i
+  -- Caso 1: d es perfecto → insertamos en i 
+  insertar-aux n (bin i₁ r₁ d₁) r d _           (yes dperf) = siftUp (bin (insertar n (bin i₁ r₁ d₁)) r d)
+  -- Caso 2: d no es perfecto, i es perfecto → insertamos en d
   insertar-aux n (bin i₁ r₁ d₁) r d (yes iperf) (no _)      = siftUp (bin (bin i₁ r₁ d₁) r (insertar n d))
-  insertar-aux n (bin i₁ r₁ d₁) r d (yes iperf) (yes dperf) = siftUp (bin (insertar n (bin i₁ r₁ d₁)) r d)
-  insertar-aux n (bin i₁ r₁ d₁) r d (no  _    ) _           = siftUp (bin (insertar n (bin i₁ r₁ d₁)) r d)
+  -- Caso 3: d no es perfecto, i no es perfecto → insertamos en i
+  insertar-aux n (bin i₁ r₁ d₁) r d (no  _)     (no _)      = siftUp (bin (insertar n (bin i₁ r₁ d₁)) r d)
 
 
 es-nil-es-valido : ∀ {i} -> esNil i -> HeapValido i
@@ -228,7 +256,7 @@ siftUp-preserva-validez {nil} {r} {bin i₂ r₂ d₂} hi hd with r ≤? r₂
 ... | no  r>r₂ = {!   !} 
 siftUp-preserva-validez {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} hi hd with r ≤? r₁ | r ≤? r₂ | r₁ ≤? r₂
 -- r es el mínimo
-... | yes r≤r₁ | yes r≤r₂ | _         = {!   !}
+... | yes r≤r₁ | yes r≤r₂ | _         = heap-bin {!   !} {!   !} {!   !} 
 -- ABSURDO
 ... | yes r≤r₁ | no  r₂<r  | yes r₁≤r₂ = ⊥-elim (absurdo₂ r≤r₁ r₁≤r₂ r₂<r)
 -- r₂ es el mínimo (r₂ < r ≤ r₁)
@@ -262,7 +290,7 @@ siftUp-preserva-estructura {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} comp wi
 ... | no  r₁<r | no  r₂<r | yes r₁≤r₂  = comp
 ... | no  r₁<r | no  r₂<r | no  r₂<r₁  = comp
 
--- TEOREMA: Combinando ambos lemas, siftUp convierte un árbol con subárboles válidos en un heap válido y completo
+-- Combinando ambos lemas, siftUp convierte un árbol con subárboles válidos en un heap válido y completo
 siftUp-corrige : ∀ {i r d} -> HeapValido i -> HeapValido d -> esCompleto (bin i r d) -> Heap (siftUp (bin i r d))
 siftUp-corrige {i} {r} {d} hvi hvd comp = record 
   { valido = siftUp-preserva-validez hvi hvd 
@@ -278,9 +306,9 @@ mutual
   insertar-preserva-invariante {bin i r d} {n} h = insertar-bin-aux n i r d h (esPerfecto? i) (esPerfecto? d)
 
   -- FUNCION AUXILIAR PARA QUE UNIFIQUE Heap (insertar n (bin i r d))
-  -- Recibe explícitamente el resultado de (esPerfecto? i) para que Agda pueda reducir
-  -- insertar n (bin i r d) = insertar-aux n i r d (esPerfecto? i)
-  -- y así unificar los tipos correctamente al hacer pattern matching en el parámetro p
+  -- Recibe explícitamente los resultados de (esPerfecto? i) y (esPerfecto? d) para que Agda pueda reducir
+  -- insertar n (bin i r d) = insertar-aux n i r d (esPerfecto? i) (esPerfecto? d)
+  -- y así unificar los tipos correctamente al hacer pattern matching en los parámetros p y q
   insertar-bin-aux : ∀ n i r d -> Heap (bin i r d) -> (p : Dec (esPerfecto i)) -> (q : Dec (esPerfecto d)) -> Heap (insertar-aux n i r d p q)
   -- Caso: i es nil (pero entonces el árbol sería bin nil r d, que es válido solo si d es nil también)
   insertar-bin-aux n nil r d h p q = siftUp-corrige heap-nil heap-nil (inj₁ (refl , tt , tt))
@@ -297,16 +325,8 @@ mutual
       -- y el caso de que (height i ≡ height d + 1) (porque d tenia el ultimo nivel vacio, entonces insertar le suma uno de altura)
       (inj₁ ({!   !} , iperf , (extraer-esCompleto (Heap.completo (insertar-preserva-invariante {d} {n} (heap-su-hijo-der-es-heap h))))) )
       
-  -- Caso: ambos son perfectos -> insertamos en i
-  insertar-bin-aux n (bin i₁ r₁ d₁) r d h (yes iperf) (yes dperf) = 
-    siftUp-corrige
-      (Heap.valido (insertar-preserva-invariante {bin i₁ r₁ d₁} {n} (heap-su-hijo-izq-es-heap h)))
-      (heap-valido-su-hijo-der-es-valido (Heap.valido h))
-      (inj₂ ({!   !} , (extraer-esCompleto (Heap.completo (insertar-preserva-invariante {bin i₁ r₁ d₁ } {n} (heap-su-hijo-izq-es-heap h))) , dperf) ))
-
-  -- Caso: i no es perfecto -> insertamos en i
-  insertar-bin-aux n (bin i₁ r₁ d₁) r d h (no ¬iperf) (yes dperf) = 
-    -- insertar-aux n (bin i₁ r₁ d₁) r d (no ¬iperf) = siftUp (bin (insertar n (bin i₁ r₁ d₁)) r d)
+  -- Caso: d es perfecto -> insertamos en i 
+  insertar-bin-aux n (bin i₁ r₁ d₁) r d h _ (yes dperf) = 
     siftUp-corrige
       (Heap.valido (insertar-preserva-invariante {bin i₁ r₁ d₁} {n} (heap-su-hijo-izq-es-heap h)))
       (heap-valido-su-hijo-der-es-valido (Heap.valido h))
@@ -314,5 +334,9 @@ mutual
 
   -- Este caso es absurdo. h no seria un heap. A partir de aca tenemos que sacar algun absurdo
   -- Deberia salir facil, en la demo de que h es completo tenemos que iperf o que dperf.
-  insertar-bin-aux n (bin i₁ r₁ d₁) r d h (no ¬iperf) (no ¬dperf) = {!   !}
+  insertar-bin-aux n (bin i₁ r₁ d₁) r d h (no ¬iperf) (no ¬dperf) = 
+    case (extraer-esCompleto (Heap.completo h)) of λ
+      { (inj₁ (_ , iperf , _)) -> ⊥-elim (¬iperf iperf)
+      ; (inj₂ (_ , _ , dperf)) -> ⊥-elim (¬dperf dperf)
+      } 
        
