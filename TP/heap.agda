@@ -1,7 +1,7 @@
-open import Data.Nat using (ℕ; zero; suc; _≤_; _⊔_; _+_; _^_; _∸_; _<_; _>_)
+open import Data.Nat using (ℕ; zero; suc; _≤_; _⊔_; _+_; _∸_; _<_; _>_)
 open import Data.Nat.Properties using (_≤?_; _≟_; ≤-trans; ≤-total)
 open import Relation.Nullary using (Dec; yes; no; ¬_)
-open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong)
+open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong; trans; sym)
 open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Unit using (⊤; tt)
 open import Data.Product using (_×_; _,_; ∃-syntax; proj₁; proj₂)
@@ -71,6 +71,7 @@ esPerfecto? (bin i r d) with height i ≟ height d | esPerfecto? i | esPerfecto?
 ... | _          | _         | no ¬dperf = no λ { (_ , _ , dperf) → ¬dperf dperf }
 
 -- Esta definicion de completo toma en cuenta que se llene de izquierda a derecha.
+-- todo: definir esCompleto en base a "tiene estructura de heap de n nodos" 
 esCompleto : AB -> Set
 esCompleto nil = ⊤
 esCompleto (bin i r d) = 
@@ -97,12 +98,9 @@ esCompleto? (bin i r d) with height i ≟ height d | esPerfecto? i | esCompleto?
 -- Caso: alturas incorrectas
 ... | no ¬eq | _         | _         | no ¬eq' | _         | _         = no λ { (inj₁ (eq , _ , _)) -> ¬eq eq ; (inj₂ (eq' , _ , _)) -> ¬eq' eq' }
 
-
--- Con la definición inductiva de esPerfecto, esta demostración es trivial
 perfecto-implica-completo : ∀ {a} -> esPerfecto a -> esCompleto a
 perfecto-implica-completo {nil} perf = tt
-perfecto-implica-completo {bin i r d} (hi≡hd , iperf , dperf) = 
-  inj₁ (hi≡hd , iperf , perfecto-implica-completo dperf) 
+perfecto-implica-completo {bin i r d} (hi≡hd , iperf , dperf) = inj₁ (hi≡hd , iperf , perfecto-implica-completo dperf) 
 
 esNil : (h : AB) -> Set
 esNil nil = ⊤
@@ -123,6 +121,7 @@ data HeapCompleto : AB -> Set where
     completo-nil : HeapCompleto nil
     completo-bin : ∀ h -> esCompleto h -> HeapCompleto h
                 
+-- esHeap
 record Heap (a : AB) : Set where
     field
         valido   : HeapValido a
@@ -196,27 +195,79 @@ siftUp' (suc k) (bin (bin i₁ r₁ d₁) r (bin i₂ r₂ d₂)) with r ≤? r�
 siftUp : AB -> AB
 siftUp t = siftUp' (height t) t
 
--- Función auxiliar que hace explícita la decisión de esPerfecto
+-- Función auxiliar 
 insertar-aux : ℕ -> AB -> AB
 insertar-aux n nil = bin nil n nil
 insertar-aux n (bin i r d) with esPerfecto? d | esPerfecto? i
 -- Caso 1: d es perfecto → insertamos en i 
-... | yes dperf | _         = bin (insertar-aux n i) r d
--- Caso 2: d no es perfecto, i es perfecto → insertamos en d
+... | yes dperf | no  _    = bin (insertar-aux n i) r d
+-- Caso 3: d no es perfecto, i es perfecto → insertamos en d
 ... | no ¬dperf | yes iperf = bin i r (insertar-aux n d)
--- Caso 3: d no es perfecto, i no es perfecto → insertamos en i
+-- Caso 4: d no es perfecto, i no es perfecto → insertamos en i
 ... | no ¬dperf | no ¬iperf = bin (insertar-aux n i) r d
+-- Caso 2: ambos son perfectos: depende de la altura
+... | yes dperf | yes iperf  with height i ≟ height d | height i ≟ suc (height d)
+...     | yes _  | no _  = bin (insertar-aux n i) r d
+...     | no  _  | yes _ = bin i r (insertar-aux n d)
+...     | no  _  | no _  = bin (insertar-aux n i) r d
+...     | yes _  | yes _ = {!   !}
+    
 
 insertar : ℕ -> AB -> AB
 insertar n nil = bin nil n nil
 insertar n (bin i r d) = siftUp (insertar-aux n (bin i r d))
 
+hijo-izq : AB -> AB
+hijo-izq nil = nil
+hijo-izq (bin i r d) = i
+
+hijo-der : AB -> AB
+hijo-der nil = nil
+hijo-der (bin i r d) = d
+
+raizDe : AB -> ℕ
+raizDe nil = zero
+raizDe (bin _ r _) = r
+
+
+insertar-en-¬perf-mantiene-altura : ∀ {i r} -> (esPerfecto i -> ⊥) -> height (insertar-aux r i) ≡ height i
+insertar-en-¬perf-mantiene-altura = {!   !}
 
 -- Insertar en un árbol completo preserva la completitud (forma del árbol).
-insertar-aux-preserva-completo : ∀ {i r d} -> (n : ℕ) -> esCompleto (bin i r d) -> esCompleto (insertar-aux n (bin i r d))
-insertar-aux-preserva-completo n comp = {!   !}
+insertar-aux-preserva-completo : ∀ {a} -> (n : ℕ) -> esCompleto a -> esCompleto (insertar-aux n a)
+insertar-aux-preserva-completo {nil} n comp = {!   !}
+insertar-aux-preserva-completo {bin i r d} n (inj₁ (hi≡hd , iperf , dcomp)) with esPerfecto? d | esPerfecto? i | height i ≟ height d | height i ≟ suc (height d)
+... | _ | _ | _ | yes hi=hd+1  = ⊥-elim {!   !}
+... | _ | _ | no hi≠hd | _     = ⊥-elim {!   !}
+-- Caso 1: d es perfecto → insertamos en i 
+... | yes dperf | no ¬iperf  | yes _ | no _ = ⊥-elim {!   !} 
+-- Caso 1: d e i son perfectos → insertamos en d
+... | yes dperf | yes iperf | yes _ | no _ = {!   !} --(? , insertar-aux-preserva-completo n (perfecto-implica-completo iperf) , dperf)
+-- Caso 2: d no es perfecto, i es perfecto → insertamos en d
+-- aca tengo que usar la recursion, no?
+... | no ¬dperf | yes iperf | yes _ | no _ = {!   !} --inj₁ ({!   !} , iperf , insertar-aux-preserva-completo n dcomp)
+
+-- Caso 3: d no es perfecto, i no es perfecto -> abs pues tenemos iperf
+... | no ¬dperf | no ¬iperf | yes _ | no _  = ⊥-elim (¬iperf iperf)
+
+insertar-aux-preserva-completo {bin i r d} n (inj₂ (hi≡hd+1 , icomp , dperf)) with esPerfecto? d | esPerfecto? i | height i ≟ height d | height i ≟ suc (height d)
+-- Caso 1: d es perfecto e i no es perfecto→ insertamos en i 
+-- sym (trans (insertar-en-¬perf-mantiene-altura) (hi≡hd+1))
+... | _ | _ | yes hi=hd | _  = ⊥-elim {!   !}
+... | _ | _ | _ | no hi≠hd+1 = ⊥-elim {!   !}
+... | yes dperf | no ¬iperf | no _ | yes _ = inj₂ ({!   !} , insertar-aux-preserva-completo n icomp , dperf)
+-- insertar en d
+... | yes dperf | yes iperf | no _ | yes _ = {!   !} --inj₁ ({!   !} , {!   !} , {!   !})
+-- Caso 2: d no es perfecto, i es perfecto → insertamos en d
+-- ABSURDO con ¬dperf dperf
+... | no ¬dperf | yes iperf | no _ | yes _ = ⊥-elim (¬dperf dperf)
+-- Caso 3: d no es perfecto, i no es perfecto → insertamos en i
+-- ABSURDO con ¬dperf dperf
+... | no ¬dperf | no ¬iperf | no _ | yes _ = ⊥-elim (¬dperf dperf)
+
 
 -- siftUp preserva esCompleto (no altera la forma del árbol)
+-- deberia ser facil de demostrar, es separar en casos y devolver comp...
 siftUp-preserva-completo : ∀ {t} -> esCompleto t -> esCompleto (siftUp t)
 siftUp-preserva-completo comp = {!   !}
 
@@ -253,8 +304,12 @@ hijo-der-nil-de-altura-1 {nil} {r} {bin i₂ r₂ d₂} ()
 hijo-der-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {nil} ()
 hijo-der-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} ()
 
-siftUp-corrige : ∀ {i r d n} -> HeapValido i -> HeapValido d -> esCompleto (bin i r d) -> Heap (siftUp (insertar-aux n (bin i r d)))
--- Por ahora asumamos que se puede. Ahora si que tiene sentido que corrija TODO el heap, porque siftUp es recursivo
+siftUp-corrige : ∀ {i r d n} -> 
+                HeapValido i -> 
+                HeapValido d -> 
+                esCompleto (bin i r d) -> 
+                Heap (siftUp (insertar-aux n (bin i r d)))
+-- Ahora si que tiene sentido que corrija TODO el heap, porque siftUp es recursivo
 siftUp-corrige {i} {r} {d} {n} hi hd comp =
   record
     { valido = {!   !}
