@@ -233,7 +233,8 @@ raizDe (bin _ r _) = r
 
 
 insertar-en-¬perf-mantiene-altura : ∀ {i r} -> (esPerfecto i -> ⊥) -> height (insertar-aux r i) ≡ height i
-insertar-en-¬perf-mantiene-altura = {!   !}
+insertar-en-¬perf-mantiene-altura {i} {r} = {!   !}
+
 
 insertar-en-perf-aumenta-altura : ∀ {a k} -> esPerfecto a -> height (insertar-aux k a) ≡ suc (height a)
 insertar-en-perf-aumenta-altura {nil}       perf = refl
@@ -308,7 +309,7 @@ insertar-aux-preserva-completo {bin i r d} n (inj₂ (hi≡hd+1 , icomp , dperf)
 -- siftUp preserva esCompleto (no altera la forma del árbol)
 -- deberia ser facil de demostrar, es separar en casos y devolver comp...
 siftUp-preserva-completo : ∀ {t} -> esCompleto t -> esCompleto (siftUp t)
-siftUp-preserva-completo comp = {!   !}
+siftUp-preserva-completo comp = ?
 
 es-nil-es-valido : ∀ {i} -> esNil i -> HeapValido i
 es-nil-es-valido {nil} esnil = heap-nil
@@ -343,15 +344,26 @@ hijo-der-nil-de-altura-1 {nil} {r} {bin i₂ r₂ d₂} ()
 hijo-der-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {nil} ()
 hijo-der-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} ()
 
+
+siftUp-preserva-validez : ∀ {a n} -> HeapValido a -> esCompleto a -> HeapValido (siftUp (insertar-aux n a))
+siftUp-preserva-validez {nil} valido completo         = heap-bin heap-nil heap-nil tt
+siftUp-preserva-validez {bin i r d} valido completo with esCompleto? i | esCompleto? d 
+... | yes iperf | yes dperf = ?
+... | yes iperf | no ¬dperf = ?
+... | no ¬iperf | yes dperf = ?
+... | no ¬iperf | no ¬dperf = ?
+
+
+
 siftUp-corrige : ∀ {i r d n} -> 
                 HeapValido i -> 
                 HeapValido d -> 
                 esCompleto (bin i r d) -> 
+                HeapValido (bin i r d) ->
                 Heap (siftUp (insertar-aux n (bin i r d)))
--- Ahora si que tiene sentido que corrija TODO el heap, porque siftUp es recursivo
-siftUp-corrige {i} {r} {d} {n} hi hd comp =
+siftUp-corrige {i} {r} {d} {n} hi hd comp valido =
   record
-    { valido = {!   !}
+    { valido = ?
     ; completo = completo-bin (siftUp t) (siftUp-preserva-completo (insertar-aux-preserva-completo n comp))
     }
   where
@@ -362,8 +374,9 @@ insertar-preserva-invariante {nil} {n} _ = record
   { valido = heap-bin heap-nil heap-nil tt
   ; completo = completo-bin (bin nil n nil) (inj₁ (refl , tt , tt))
   }
-insertar-preserva-invariante {bin i r d} {n} h = siftUp-corrige hvi hvd comp
+insertar-preserva-invariante {bin i r d} {n} h = siftUp-corrige hvi hvd comp valido
   where
     hvi = heap-valido-su-hijo-izq-es-valido (Heap.valido h)
     hvd = heap-valido-su-hijo-der-es-valido (Heap.valido h)
     comp = extraer-esCompleto (Heap.completo h)
+    valido = Heap.valido h
