@@ -178,20 +178,20 @@ siftUp' (suc k) (bin (bin i₁ r₁ d₁) r nil) with r ≤? r₁
 ... | yes p = bin (siftUp' k (bin i₁ r₁ d₁)) r nil
 ... | no  p = bin (siftUp' k (bin i₁ r  d₁)) r₁ nil
 siftUp' (suc k) (bin (bin i₁ r₁ d₁) r (bin i₂ r₂ d₂)) with r ≤? r₁ | r ≤? r₂ | r₁ ≤? r₂
--- r es el mínimo
-... | yes r≤r₁ | yes r≤r₂ | _         = bin (siftUp' k (bin i₁ r₁ d₁)) r (siftUp' k (bin i₂ r₂ d₂))
+-- r YA es el mínimo
+... | yes r≤r₁ | yes r≤r₂ | _         = bin (bin i₁ r₁ d₁) r (bin i₂ r₂ d₂)
 -- ABSURDO (r ≤ r₁ ∧ r₂ < r ∧ r₁ ≤ r₂)
 ... | yes r≤r₁ | no  r₂<r  | yes r₁≤r₂ = ⊥-elim (absurdo₂ r≤r₁ r₁≤r₂ r₂<r)
 -- r₂ es el mínimo (r₂ < r ∧ r₂ < r₁)
-... | yes r≤r₁ | no  r₂<r | no  r₂<r₁ = bin (siftUp' k (bin i₁ r₁ d₁)) r₂ (siftUp' k (bin i₂ r  d₂))
+... | yes r≤r₁ | no  r₂<r | no  r₂<r₁ = bin (bin i₁ r₁ d₁) r₂ (siftUp' k (bin i₂ r  d₂))
 -- r₁ es el mínimo (r₁ < r ≤ r₂ ∧ r₁ ≤ r₂)
-... | no  r₁<r | yes r≤r₂ | yes r₁≤r₂ = bin (siftUp' k (bin i₁ r₁ d₁)) r  (siftUp' k (bin i₂ r₂ d₂))
+... | no  r₁<r | yes r≤r₂ | yes r₁≤r₂ = bin (siftUp' k (bin i₁ r₁ d₁)) r  (bin i₂ r₂ d₂)
 -- r es el mínimo (r < r₁, r ≤ r₂ < r₁ → r ≤ r₂ < r₁)
-... | no  r₁<r | yes r≤r₂ | no  r₂<r₁ = bin (siftUp' k (bin i₁ r₁ d₁)) r  (siftUp' k (bin i₂ r₂ d₂))
+... | no  r₁<r | yes r≤r₂ | no  r₂<r₁ = bin (bin i₁ r₁ d₁) r  (bin i₂ r₂ d₂)
 -- r₁ es el mínimo (r₁ < r ∧ r₂ < r ∧ r₁ ≤ r₂)
-... | no  r₁<r | no  r₂<r | yes r₁≤r₂ = bin (siftUp' k (bin i₁ r  d₁)) r₁ (siftUp' k (bin i₂ r₂ d₂))
+... | no  r₁<r | no  r₂<r | yes r₁≤r₂ = bin (siftUp' k (bin i₁ r  d₁)) r₁ (bin i₂ r₂ d₂)
 -- r₂ es el mínimo (r₁ < r ∧ r₂ < r ∧ r₂ < r₁)
-... | no  r₁<r | no  r₂<r | no  r₂<r₁ = bin (siftUp' k (bin i₁ r₁ d₁)) r₂ (siftUp' k (bin i₂ r d₂))
+... | no  r₁<r | no  r₂<r | no  r₂<r₁ = bin (bin i₁ r₁ d₁) r₂ (siftUp' k (bin i₂ r d₂))
 
 -- Wrapper que inicia el fuel en la altura del árbol
 siftUp : AB -> AB
@@ -308,8 +308,9 @@ insertar-aux-preserva-completo {bin i r d} n (inj₂ (hi≡hd+1 , icomp , dperf)
 
 -- siftUp preserva esCompleto (no altera la forma del árbol)
 -- deberia ser facil de demostrar, es separar en casos y devolver comp...
-siftUp-preserva-completo : ∀ {t} -> esCompleto t -> esCompleto (siftUp t)
-siftUp-preserva-completo comp = ?
+siftUp-preserva-completo : ∀ {a} -> esCompleto a -> esCompleto (siftUp a)
+siftUp-preserva-completo {nil} comp = comp
+siftUp-preserva-completo {t} comp = {!   !}
 
 es-nil-es-valido : ∀ {i} -> esNil i -> HeapValido i
 es-nil-es-valido {nil} esnil = heap-nil
@@ -345,14 +346,10 @@ hijo-der-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {nil} ()
 hijo-der-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} ()
 
 
-siftUp-preserva-validez : ∀ {a n} -> HeapValido a -> esCompleto a -> HeapValido (siftUp (insertar-aux n a))
-siftUp-preserva-validez {nil} valido completo         = heap-bin heap-nil heap-nil tt
-siftUp-preserva-validez {bin i r d} valido completo with esCompleto? i | esCompleto? d 
-... | yes iperf | yes dperf = ?
-... | yes iperf | no ¬dperf = ?
-... | no ¬iperf | yes dperf = ?
-... | no ¬iperf | no ¬dperf = ?
-
+-- siftUp corrige la validez cuando se aplica a un árbol completo
+-- (no necesariamente válido, ya que insertar-aux puede romper la validez)
+siftUp-corrige-validez : ∀ {i r d} -> HeapValido i -> HeapValido d -> esCompleto (bin i r d) -> HeapValido (siftUp (bin i r d))
+siftUp-corrige-validez hi hd comp = {!   !}
 
 
 siftUp-corrige : ∀ {i r d n} -> 
@@ -363,7 +360,7 @@ siftUp-corrige : ∀ {i r d n} ->
                 Heap (siftUp (insertar-aux n (bin i r d)))
 siftUp-corrige {i} {r} {d} {n} hi hd comp valido =
   record
-    { valido = ?
+    { valido = {!   !}
     ; completo = completo-bin (siftUp t) (siftUp-preserva-completo (insertar-aux-preserva-completo n comp))
     }
   where
