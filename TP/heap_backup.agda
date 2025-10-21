@@ -9,8 +9,6 @@ open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Function using (case_of_)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq.≡-Reasoning
-open import Relation.Binary.PropositionalEquality using (subst)
-
 
 --auxiliares 
 absurdo₁ : {a b : ℕ} -> a ≡ b -> a ≡ suc b -> ⊥
@@ -305,19 +303,6 @@ hijo-der-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} ()
 insertar-preserva-completo : ∀ {h n} -> Heap h -> esCompleto (insertar n h)
 insertar-preserva-completo h = {!   !}
 
-raizMenor-post-insercion-caso1 : ∀ {n r} (i d : AB) → (h-valido : HeapValido (bin i r d)) → (n≤k : n ≤ r) → 
-                                 raizMenorQueHijos (bin (insertar r i) n d)
-raizMenor-post-insercion-caso1 nil nil h-valido n≤r  = n≤r
-raizMenor-post-insercion-caso1 nil (bin i₁ r₁ d₁) (heap-bin _ _ rmqh) n≤r = (n≤r , ≤-trans n≤r rmqh)
-raizMenor-post-insercion-caso1 {n} {r} (bin i₁ r₁ d₁) nil (heap-bin ival dval rmqh) n≤r with r ≤? r₁
-... | yes r≤r₁ with size i₁ ≤? size d₁
-...   | yes _ = ?
-...   | no  _ = ?
-raizMenor-post-insercion-caso1 {n} {r} (bin i₁ r₁ d₁) (bin i₂ r₂ d₂) h-valido n≤r with r ≤? r₁
-... | yes leq = {!   !}
-... | no   ge = {!   !}
-
-
 insertar-preserva-validez : ∀ {a n} -> Heap a -> HeapValido (insertar n a)
 insertar-preserva-validez {nil} h = heap-bin heap-nil heap-nil tt 
 insertar-preserva-validez {bin i r d} {n} h = casesplit
@@ -336,7 +321,7 @@ insertar-preserva-validez {bin i r d} {n} h = casesplit
 
     casesplit : HeapValido (insertar n (bin i r d))
     casesplit with n ≤? r | size i ≤? size d
-    ... | yes n≤r | yes i≤d = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso1 {n} {r} i d (Heap.valido h) n≤r)
+    ... | yes n≤r | yes i≤d = heap-bin (insertar-preserva-validez iheap) dval ? 
     ... | yes n≤r | no  i>d = heap-bin ival (insertar-preserva-validez dheap) {!   !} 
     ... | no  n>r | no  i>d = heap-bin ival (insertar-preserva-validez dheap) {!   !}
     ... | no  n>r | yes i≤d = heap-bin (insertar-preserva-validez iheap) dval {!   !} 
