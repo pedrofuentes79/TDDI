@@ -1,5 +1,5 @@
-open import Data.Nat using (ℕ; zero; suc; _≤_; _⊔_; _+_; _∸_; _<_; _>_)
-open import Data.Nat.Properties using (_≤?_; _≟_; ≤-trans; ≤-total)
+open import Data.Nat using (ℕ; zero; suc; _≤_; _⊔_; _+_; _∸_; _<_; _>_; s≤s; z≤n)
+open import Data.Nat.Properties using (_≤?_; _≟_; ≤-trans; ≤-total; ⊔-idem; ⊔-comm; m≤n⇒m⊔n≡n; ⊔-identityʳ; n≤1+n)
 open import Relation.Nullary using (Dec; yes; no; ¬_)
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong; trans; sym)
 open import Data.Empty using (⊥; ⊥-elim)
@@ -232,6 +232,39 @@ raizDe (bin _ r _) = r
 
 insertar-en-¬perf-mantiene-altura : ∀ {i r} -> (esPerfecto i -> ⊥) -> height (insertar-aux r i) ≡ height i
 insertar-en-¬perf-mantiene-altura = {!   !}
+
+insertar-en-perf-aumenta-altura : ∀ {a k} -> esPerfecto a -> height (insertar-aux k a) ≡ suc (height a)
+insertar-en-perf-aumenta-altura {nil}       perf = refl
+insertar-en-perf-aumenta-altura {bin i r d} {k} (hi≡hd , iperf , dperf) with esPerfecto? d | esPerfecto? i
+-- Casos absurdos
+... | yes dperf' | no ¬iperf = {!   !}
+... | no ¬dperf  | yes iperf' = {!   !}
+... | no ¬dperf  | no ¬iperf = {!   !}
+-- Cuando ambos son perfectos, necesitamos coincidir con los with anidados de insertar-aux
+... | yes dperf' | yes iperf' with height i ≟ height d | height i ≟ suc (height d)
+-- Caso: height i ≡ height d → insertamos en i
+...     | yes hi≡hd' | no _ =
+    let rec = insertar-en-perf-aumenta-altura {i} {k} iperf 
+        -- rec : height (insertar-aux k i) ≡ suc (height i)
+        -- queremos: suc (height (insertar-aux k i) ⊔ height d) ≡ suc (suc (height i ⊔ height d))
+        -- Paso 1: height (insertar-aux k i) ⊔ height d ≡ suc (height i) ⊔ height d
+        paso1 : height (insertar-aux k i) ⊔ height d ≡ suc (height i) ⊔ height d
+        paso1 = cong (_⊔ height d) rec
+        -- Paso 2: suc (height i) ⊔ height d ≡ suc (height i) ⊔ height i (usando hi≡hd)
+        paso2 : suc (height i) ⊔ height d ≡ suc (height i) ⊔ height i
+        paso2 = cong (suc (height i) ⊔_) (sym hi≡hd)
+        -- Paso 3: suc (height i) ⊔ height i ≡ suc (height i)
+        paso3 : suc (height i) ⊔ height i ≡ suc (height i)
+        paso3 = trans (⊔-comm (suc (height i)) (height i)) (m≤n⇒m⊔n≡n (n≤1+n (height i)))
+        -- Paso 4: suc (height i) ≡ suc (height i ⊔ height d) (usando hi≡hd e ⊔-idem)
+        paso4 : suc (height i) ≡ suc (height i ⊔ height d)
+        paso4 = cong suc (sym (trans (cong (height i ⊔_) (sym hi≡hd)) (⊔-idem (height i))))
+    in cong suc (trans (trans paso1 (trans paso2 paso3)) paso4)
+-- Subcasos restantes
+...     | yes _      | yes _ = {!   !}
+...     | no  _      | yes _ = {!   !}
+...     | no  _      | no  _ = {!   !}
+
 
 -- Insertar en un árbol completo preserva la completitud (forma del árbol).
 insertar-aux-preserva-completo : ∀ {a} -> (n : ℕ) -> esCompleto a -> esCompleto (insertar-aux n a)
