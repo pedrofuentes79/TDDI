@@ -7,6 +7,8 @@ open import Data.Unit using (⊤; tt)
 open import Data.Product using (_×_; _,_; ∃-syntax; proj₁; proj₂)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Function using (case_of_)
+import Relation.Binary.PropositionalEquality as Eq
+open Eq.≡-Reasoning
 
 --auxiliares 
 absurdo₁ : {a b : ℕ} -> a ≡ b -> a ≡ suc b -> ⊥
@@ -245,21 +247,19 @@ insertar-en-perf-aumenta-altura {bin i r d} {k} (hi≡hd , iperf , dperf) with e
 -- Caso: height i ≡ height d → insertamos en i
 ...     | yes hi≡hd' | no _ =
     let rec = insertar-en-perf-aumenta-altura {i} {k} iperf 
-        -- rec : height (insertar-aux k i) ≡ suc (height i)
-        -- queremos: suc (height (insertar-aux k i) ⊔ height d) ≡ suc (suc (height i ⊔ height d))
-        -- Paso 1: height (insertar-aux k i) ⊔ height d ≡ suc (height i) ⊔ height d
-        paso1 : height (insertar-aux k i) ⊔ height d ≡ suc (height i) ⊔ height d
-        paso1 = cong (_⊔ height d) rec
-        -- Paso 2: suc (height i) ⊔ height d ≡ suc (height i) ⊔ height i (usando hi≡hd)
-        paso2 : suc (height i) ⊔ height d ≡ suc (height i) ⊔ height i
-        paso2 = cong (suc (height i) ⊔_) (sym hi≡hd)
-        -- Paso 3: suc (height i) ⊔ height i ≡ suc (height i)
-        paso3 : suc (height i) ⊔ height i ≡ suc (height i)
-        paso3 = trans (⊔-comm (suc (height i)) (height i)) (m≤n⇒m⊔n≡n (n≤1+n (height i)))
-        -- Paso 4: suc (height i) ≡ suc (height i ⊔ height d) (usando hi≡hd e ⊔-idem)
-        paso4 : suc (height i) ≡ suc (height i ⊔ height d)
-        paso4 = cong suc (sym (trans (cong (height i ⊔_) (sym hi≡hd)) (⊔-idem (height i))))
-    in cong suc (trans (trans paso1 (trans paso2 paso3)) paso4)
+    in cong suc (begin 
+    begin
+      height (insertar-aux k i) ⊔ height d
+    ≡⟨ cong (_⊔ height d) rec ⟩ 
+      suc (height i) ⊔ height d
+    ≡⟨ cong (suc (height i) ⊔_) (sym hi≡hd) ⟩ 
+      suc (height i) ⊔ height i
+      -- TODO expandir esto, y por ahi probar aparte algun que otro import no tan justificado?
+    ≡⟨ trans (⊔-comm (suc (height i)) (height i)) (m≤n⇒m⊔n≡n (n≤1+n (height i))) ⟩ 
+      suc (height i)
+    ≡⟨ cong suc (sym (trans (cong (height i ⊔_) (sym hi≡hd)) (⊔-idem (height i)))) ⟩ 
+      suc (height i ⊔ height d)
+    ∎)
 -- Subcasos restantes
 ...     | yes _      | yes _ = {!   !}
 ...     | no  _      | yes _ = {!   !}
