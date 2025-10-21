@@ -210,7 +210,7 @@ insertar-aux n (bin i r d) with esPerfecto? d | esPerfecto? i
 ...     | yes _  | no _  = bin (insertar-aux n i) r d
 ...     | no  _  | yes _ = bin i r (insertar-aux n d)
 ...     | no  _  | no _  = bin (insertar-aux n i) r d
-...     | yes _  | yes _ = {!   !}
+...     | yes _  | yes _ = {!   !} -- absurdo, demostrar despues. 
     
 
 insertar : ℕ -> AB -> AB
@@ -235,35 +235,72 @@ insertar-en-¬perf-mantiene-altura = {!   !}
 
 -- Insertar en un árbol completo preserva la completitud (forma del árbol).
 insertar-aux-preserva-completo : ∀ {a} -> (n : ℕ) -> esCompleto a -> esCompleto (insertar-aux n a)
-insertar-aux-preserva-completo {nil} n comp = {!   !}
-insertar-aux-preserva-completo {bin i r d} n (inj₁ (hi≡hd , iperf , dcomp)) with esPerfecto? d | esPerfecto? i | height i ≟ height d | height i ≟ suc (height d)
-... | _ | _ | _ | yes hi=hd+1  = ⊥-elim {!   !}
-... | _ | _ | no hi≠hd | _     = ⊥-elim {!   !}
--- Caso 1: d es perfecto → insertamos en i 
-... | yes dperf | no ¬iperf  | yes _ | no _ = ⊥-elim {!   !} 
--- Caso 1: d e i son perfectos → insertamos en d
-... | yes dperf | yes iperf | yes _ | no _ = {!   !} --(? , insertar-aux-preserva-completo n (perfecto-implica-completo iperf) , dperf)
--- Caso 2: d no es perfecto, i es perfecto → insertamos en d
--- aca tengo que usar la recursion, no?
-... | no ¬dperf | yes iperf | yes _ | no _ = {!   !} --inj₁ ({!   !} , iperf , insertar-aux-preserva-completo n dcomp)
+insertar-aux-preserva-completo {nil} n comp = inj₁ (refl , tt , tt)
+-- insertar-aux-preserva-completo {bin i r d} n (inj₁ (hi≡hd , iperf , dcomp)) with esPerfecto? d | esPerfecto? i | height i ≟ height d | height i ≟ suc (height d)
+-- -- Casos absurdos: colisionan las igualdades de altura
+-- ... | _ | _ | _ | yes hi=hd+1  = ⊥-elim {!   !}
+-- ... | _ | _ | no hi≠hd | _     = ⊥-elim {!   !}
+-- -- Caso 1: i no es perfecto
+-- ... | yes dperf | no ¬iperf  | yes _ | no _ = ⊥-elim (¬iperf iperf)
+-- -- Caso 1: i no es perfecto -> abs pues tenemos iperf
+-- ... | no ¬dperf | no ¬iperf  | yes _ | no _ = ⊥-elim (¬iperf iperf)
 
--- Caso 3: d no es perfecto, i no es perfecto -> abs pues tenemos iperf
-... | no ¬dperf | no ¬iperf | yes _ | no _  = ⊥-elim (¬iperf iperf)
+-- -- Caso 2: d e i son perfectos y de la misma altura → insertamos en i
+-- ... | yes dperf | yes iperf | yes hi≡hd | no _ = {!   !} --(? , insertar-aux-preserva-completo n (perfecto-implica-completo iperf) , dperf)
+-- -- Caso 3: d no es perfecto, i es perfecto (misma altura) → insertamos en d
+-- -- aca tengo que usar la recursion, no?
+-- ... | no ¬dperf | yes iperf | yes _ | no _ = inj₁ ({!   !} , iperf , insertar-aux-preserva-completo n dcomp)
 
-insertar-aux-preserva-completo {bin i r d} n (inj₂ (hi≡hd+1 , icomp , dperf)) with esPerfecto? d | esPerfecto? i | height i ≟ height d | height i ≟ suc (height d)
--- Caso 1: d es perfecto e i no es perfecto→ insertamos en i 
+-- insertar-aux-preserva-completo {bin i r d} n (inj₂ (hi≡hd+1 , icomp , dperf)) with esPerfecto? d | esPerfecto? i | height i ≟ height d | height i ≟ suc (height d)
+-- -- sym (trans (insertar-en-¬perf-mantiene-altura) (hi≡hd+1))
+-- -- Casos absurdos: colision de igualdades de alturas
+-- ... | _ | _ | yes hi=hd | _  = ⊥-elim {!   !}
+-- ... | _ | _ | _ | no hi≠hd+1 = ⊥-elim {!   !}
+
+-- -- Caso 1: d es perfecto e i no es perfecto → insertamos en i 
+-- ... | yes dperf | no ¬iperf | no _ | yes _ = inj₂ ({!   !} , insertar-aux-preserva-completo n icomp , dperf)
+-- -- Caso 2: ambos perfectos, distintas alturas -> insertamos en d
+-- ... | yes dperf | yes iperf | no _ | yes _ = {!   !} 
+-- -- ABSURDO
+-- ... | no ¬dperf | yes iperf | no _ | yes _ = ⊥-elim (¬dperf dperf)
+-- -- ABSURDO
+-- ... | no ¬dperf | no ¬iperf | no _ | yes _ = ⊥-elim (¬dperf dperf)
+
+insertar-aux-preserva-completo {bin i r d} n (inj₁ (hi≡hd , iperf , dcomp)) with esPerfecto? d | esPerfecto? i 
+-- Caso 1: i no es perfecto
+... | yes dperf | no ¬iperf  = ⊥-elim (¬iperf iperf)
+-- Caso 1: i no es perfecto -> abs pues tenemos iperf
+... | no ¬dperf | no ¬iperf  = ⊥-elim (¬iperf iperf)
+
+-- Caso 2: d no es perfecto, i es perfecto (misma altura) → insertamos en d
+--trans hi≡hd (sym (insertar-en-¬perf-mantiene-altura ¬dperf))
+
+... | no ¬dperf | yes iperf  = inj₁ ({!   !} , iperf , insertar-aux-preserva-completo n dcomp)
+-- Caso 3: d e i son perfectos y de la misma altura → insertamos en i
+... | yes dperf | yes iperf with height i ≟ height d | height i ≟ suc (height d)
+...        | yes eq | no neq = inj₂ (? , insertar-aux-preserva-completo n (perfecto-implica-completo iperf) , dperf)
+-- subcasos imposibles por colision
+...        | no neq | _      = ⊥-elim (neq hi≡hd)
+...        | yes eq | yes k  = ⊥-elim {!   !}
+
+--(? , insertar-aux-preserva-completo n (perfecto-implica-completo iperf) , dperf)
+
+insertar-aux-preserva-completo {bin i r d} n (inj₂ (hi≡hd+1 , icomp , dperf)) with esPerfecto? d | esPerfecto? i 
+-- ABSURDO
+... | no ¬dperf | yes iperf = ⊥-elim (¬dperf dperf)
+-- ABSURDO
+... | no ¬dperf | no ¬iperf = ⊥-elim (¬dperf dperf)
 -- sym (trans (insertar-en-¬perf-mantiene-altura) (hi≡hd+1))
-... | _ | _ | yes hi=hd | _  = ⊥-elim {!   !}
-... | _ | _ | _ | no hi≠hd+1 = ⊥-elim {!   !}
-... | yes dperf | no ¬iperf | no _ | yes _ = inj₂ ({!   !} , insertar-aux-preserva-completo n icomp , dperf)
--- insertar en d
-... | yes dperf | yes iperf | no _ | yes _ = {!   !} --inj₁ ({!   !} , {!   !} , {!   !})
--- Caso 2: d no es perfecto, i es perfecto → insertamos en d
--- ABSURDO con ¬dperf dperf
-... | no ¬dperf | yes iperf | no _ | yes _ = ⊥-elim (¬dperf dperf)
--- Caso 3: d no es perfecto, i no es perfecto → insertamos en i
--- ABSURDO con ¬dperf dperf
-... | no ¬dperf | no ¬iperf | no _ | yes _ = ⊥-elim (¬dperf dperf)
+-- Caso 1: d es perfecto e i no es perfecto → insertamos en i 
+... | yes dperf | no ¬iperf = inj₂ ({!   !} , insertar-aux-preserva-completo n icomp , dperf)
+-- Caso 2: ambos perfectos, distintas alturas -> insertamos en d
+... | yes dperf | yes iperf with height i ≟ height d | height i ≟ suc (height d)
+...        | no neq | yes eq = inj₁ (? , iperf , insertar-aux-preserva-completo n (perfecto-implica-completo dperf))
+-- subcasos imposibles por colision
+...        | no neq | _      = ⊥-elim ?
+...        | yes eq | yes k  = ⊥-elim {!   !}
+...        | yes eq | no _   = ⊥-elim ?
+
 
 
 -- siftUp preserva esCompleto (no altera la forma del árbol)
