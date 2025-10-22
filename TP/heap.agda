@@ -177,16 +177,27 @@ heap-su-hijo-der-es-heap {i} {r} {d} h = record
 
 insertar : ℕ -> AB -> AB
 insertar n nil = bin nil n nil
-insertar n (bin i r d) with n ≤? r | size i ≤? size d
+insertar n (bin i r d) with n ≤? r | esPerfecto? i | esPerfecto? d
 -- Caso 1: n es menor que la raíz (r).
 -- n se convierte en la nueva raíz y r "baja" al subárbol correspondiente.
-... | yes n≤r | yes i≤d = bin (insertar r i) n d -- r baja al subárbol izquierdo (más pequeño).
-... | yes n≤r | no  i>d = bin i n (insertar r d) -- r baja al subárbol derecho (más pequeño).
+... | yes n≤r | yes iperf | yes dperf = case height i ≟ height d of λ
+    { (yes hi≡hd) → bin (insertar r i) n d
+    ; (no  _)     → bin i n (insertar r d)
+    }
+
+... | yes n≤r | yes iperf | no ¬dperf = bin i n (insertar r d) 
+... | yes n≤r | no ¬iperf | no ¬dperf = bin (insertar r i) n d  -- No deberia suceder,insertamos en izquierda para "arreglarlo"
+... | yes n≤r | no ¬iperf | yes dperf = bin (insertar r i) n d
 
 -- Caso 2: n NO es menor que la raíz (r).
 -- r se mantiene como raíz y n se inserta en el subárbol correspondiente.
-... | no ¬n≤r | yes i≤d = bin (insertar n i) r d -- n se inserta en el subárbol izquierdo.
-... | no ¬n≤r | no  i>d = bin i r (insertar n d) -- n se inserta en el subárbol derecho.
+... | no  n>r | yes iperf | no ¬dperf = bin i r (insertar n d) 
+... | no  n>r | no ¬iperf | no ¬dperf = bin (insertar n i) r d  -- No deberia suceder,insertamos en izquierda para "arreglarlo"
+... | no  n>r | no ¬iperf | yes dperf = bin (insertar n i) r d
+... | no  n>r  | yes iperf | yes dperf with height i ≟ height d
+     -- Si la altura es igual y ambos son perfectos, insertamos en i. Si i es mas alto, insertamos en d
+...     | yes hi≡hd   = bin (insertar n i) r d 
+...     | no  hi≡hd+1 = bin i r (insertar n d)
 
 hijo-izq : AB -> AB
 hijo-izq nil = nil
@@ -335,8 +346,8 @@ insertar-preserva-validez {bin i r d} {n} h = casesplit
     dheap = heap-su-hijo-der-es-heap h
 
     casesplit : HeapValido (insertar n (bin i r d))
-    casesplit with n ≤? r | size i ≤? size d
-    ... | yes n≤r | yes i≤d = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso1 {n} {r} i d (Heap.valido h) n≤r)
+    casesplit with n ≤? r | esPerfecto? i | esPerfecto? d 
+    ... | yes n≤r | yes iperf | yes iperf = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso1 {n} {r} i d (Heap.valido h) n≤r)
     ... | yes n≤r | no  i>d = heap-bin ival (insertar-preserva-validez dheap) {!   !} 
     ... | no  n>r | no  i>d = heap-bin ival (insertar-preserva-validez dheap) {!   !}
     ... | no  n>r | yes i≤d = heap-bin (insertar-preserva-validez iheap) dval {!   !} 
