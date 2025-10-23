@@ -177,27 +177,23 @@ heap-su-hijo-der-es-heap {i} {r} {d} h = record
 
 insertar : ℕ -> AB -> AB
 insertar n nil = bin nil n nil
-insertar n (bin i r d) with n ≤? r | esPerfecto? i | esPerfecto? d
+insertar n (bin i r d) with n ≤? r | esPerfecto? i | esPerfecto? d | height i ≟ height d 
 -- Caso 1: n es menor que la raíz (r).
 -- n se convierte en la nueva raíz y r "baja" al subárbol correspondiente.
-... | yes n≤r | yes iperf | yes dperf = case height i ≟ height d of λ
-    { (yes hi≡hd) → bin (insertar r i) n d
-    ; (no  _)     → bin i n (insertar r d)
-    }
-
-... | yes n≤r | yes iperf | no ¬dperf = bin i n (insertar r d) 
-... | yes n≤r | no ¬iperf | no ¬dperf = bin (insertar r i) n d  -- No deberia suceder,insertamos en izquierda para "arreglarlo"
-... | yes n≤r | no ¬iperf | yes dperf = bin (insertar r i) n d
+... | yes n≤r | yes iperf | yes dperf | yes hi≡hd = bin (insertar r i) n d 
+... | yes n≤r | yes iperf | yes dperf | no      _ = bin i n (insertar r d)
+... | yes n≤r | yes iperf | no ¬dperf | _ = bin i n (insertar r d) 
+... | yes n≤r | no ¬iperf | no ¬dperf | _ = bin (insertar r i) n d  -- No deberia suceder,insertamos en izquierda para "arreglarlo"
+... | yes n≤r | no ¬iperf | yes dperf | _ = bin (insertar r i) n d
 
 -- Caso 2: n NO es menor que la raíz (r).
 -- r se mantiene como raíz y n se inserta en el subárbol correspondiente.
-... | no  n>r | yes iperf | no ¬dperf = bin i r (insertar n d) 
-... | no  n>r | no ¬iperf | no ¬dperf = bin (insertar n i) r d  -- No deberia suceder,insertamos en izquierda para "arreglarlo"
-... | no  n>r | no ¬iperf | yes dperf = bin (insertar n i) r d
-... | no  n>r  | yes iperf | yes dperf with height i ≟ height d
-     -- Si la altura es igual y ambos son perfectos, insertamos en i. Si i es mas alto, insertamos en d
-...     | yes hi≡hd   = bin (insertar n i) r d 
-...     | no  hi≡hd+1 = bin i r (insertar n d)
+... | no  n>r | yes iperf | no ¬dperf | _ = bin i r (insertar n d) 
+... | no  n>r | no ¬iperf | no ¬dperf | _ = bin (insertar n i) r d  -- No deberia suceder,insertamos en izquierda para "arreglarlo"
+... | no  n>r | no ¬iperf | yes dperf | _ = bin (insertar n i) r d
+... | no  n>r | yes iperf | yes dperf | yes hi≡hd = bin (insertar n i) r d 
+     -- Si la altura es igual y ambos son perfectos, insertamos en i. Si i es mas alto, insertamos en dk
+... | no  n>r | yes iperf | yes dperf | no _ = bin i r (insertar n d)
 
 hijo-izq : AB -> AB
 hijo-izq nil = nil
@@ -255,26 +251,24 @@ insertar-preserva-completo : ∀ {h n} -> Heap h -> esCompleto (insertar n h)
 insertar-preserva-completo h = {!   !}
 
 aux₁ : ∀ {n r r₁} (i₁ d₁ : AB) -> raizMenorQueHijos (bin i₁ r₁ d₁) -> n ≤ r -> r ≤ r₁ -> esPerfecto i₁ -> esPerfecto d₁ -> raizMenorQueHijos (bin (insertar r (bin i₁ r₁ d₁)) n nil)
-aux₁ i₁ d₁ rmqh n≤r r≤r₁ iperf dperf with height i₁ ≟ height d₁
-... | yes _ = ?
-... | no  _ = ?
+aux₁ i₁ d₁ rmqh n≤r r≤r₁ iperf dperf = ?
 
 raizMenor-post-insercion-caso1 : ∀ {n r} (i d : AB) → (h-valido : HeapValido (bin i r d)) → (n≤k : n ≤ r) → 
                                  raizMenorQueHijos (bin (insertar r i) n d)
 raizMenor-post-insercion-caso1 nil nil h-valido n≤r  = n≤r
 raizMenor-post-insercion-caso1 nil (bin i₁ r₁ d₁) (heap-bin _ _ rmqh) n≤r = (n≤r , ≤-trans n≤r rmqh)
 -- no podria eliminar casos diciendo que i₁ y d₁ deberian ser nil? dado que la rama derecha es nil
-raizMenor-post-insercion-caso1 {n} {r} (bin i₁ r₁ d₁) nil (heap-bin ival dval rmqh) n≤r with r ≤? r₁ | esPerfecto? i₁ | esPerfecto? d₁
-... | yes r≤r₁ | no ¬iperf | no ¬dperf = n≤r
-... | yes r≤r₁ | yes iperf | no ¬dperf = n≤r
-... | yes r≤r₁ | no ¬iperf | yes dperf = n≤r
-... | yes r≤r₁ | yes iperf | yes dperf = aux₁ i₁ d₁ (extraer-rmqh-heapvalido (heap-valido-su-hijo-izq-es-valido (heap-bin ival dval rmqh))) ? ? iperf dperf
-... | no  r>r₁ | yes iperf | no ¬dperf = ≤-trans n≤r rmqh
-... | no  r>r₁ | no ¬iperf | yes dperf = ≤-trans n≤r rmqh
-... | no  r>r₁ | no ¬iperf | no ¬dperf = ≤-trans n≤r rmqh
-... | no  r>r₁ | yes iperf | yes dperf with height i₁ ≟ height d₁
-...     | yes eq = ≤-trans n≤r rmqh
-...     | no neq = ≤-trans n≤r rmqh
+raizMenor-post-insercion-caso1 {n} {r} (bin i₁ r₁ d₁) nil (heap-bin ival dval rmqh) n≤r with r ≤? r₁ | esPerfecto? i₁ | esPerfecto? d₁ | height i₁ ≟ height d₁
+... | yes r≤r₁ | no ¬iperf | no ¬dperf | _ = n≤r
+... | yes r≤r₁ | yes iperf | no ¬dperf | _ = n≤r
+... | yes r≤r₁ | no ¬iperf | yes dperf | _ = n≤r
+... | yes r≤r₁ | yes iperf | yes dperf | yes hi≡hd  = n≤r
+... | yes r≤r₁ | yes iperf | yes dperf | no hi≡hd+1 = n≤r
+... | no  r>r₁ | yes iperf | no ¬dperf | _ = ≤-trans n≤r rmqh
+... | no  r>r₁ | no ¬iperf | yes dperf | _ = ≤-trans n≤r rmqh
+... | no  r>r₁ | no ¬iperf | no ¬dperf | _ = ≤-trans n≤r rmqh
+... | no  r>r₁ | yes iperf | yes dperf | yes hi≡hd = ≤-trans n≤r rmqh
+... | no  r>r₁ | yes iperf | yes dperf | no _ = ≤-trans n≤r rmqh
 raizMenor-post-insercion-caso1 {n} {r} (bin i₁ r₁ d₁) (bin i₂ r₂ d₂) (heap-bin ival dval rmqh) n≤r = {!   !}
 
 
