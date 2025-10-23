@@ -234,6 +234,10 @@ extraer-completo-izq (inj₁ (() , _ , _))
 extraer-completo-izq (inj₂ (_ , inj₁ (hi≡hd , iperf , dcomp) , _)) = inj₁ (hi≡hd , iperf , dcomp)
 extraer-completo-izq (inj₂ (_ , inj₂ (hi≡hd+1 , icomp , dperf) , _)) = inj₂ (hi≡hd+1 , icomp , dperf)
 
+extraer-rmqh-heapvalido : ∀ {a} -> HeapValido a -> raizMenorQueHijos a
+extraer-rmqh-heapvalido heap-nil = tt
+extraer-rmqh-heapvalido (heap-bin _ _ rmqh) = rmqh
+
 -- Auxiliares para extraer que los hijos son nil
 hijo-izq-nil-de-altura-1 : ∀ {i r d} -> height (bin i r d) ≡ 1 -> esNil i
 hijo-izq-nil-de-altura-1 {nil} {r} {nil} refl = tt
@@ -250,27 +254,27 @@ hijo-der-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} ()
 insertar-preserva-completo : ∀ {h n} -> Heap h -> esCompleto (insertar n h)
 insertar-preserva-completo h = {!   !}
 
+aux₁ : ∀ {n r r₁} (i₁ d₁ : AB) -> raizMenorQueHijos (bin i₁ r₁ d₁) -> n ≤ r -> r ≤ r₁ -> esPerfecto i₁ -> esPerfecto d₁ -> raizMenorQueHijos (bin (insertar r (bin i₁ r₁ d₁)) n nil)
+aux₁ i₁ d₁ rmqh n≤r r≤r₁ iperf dperf with height i₁ ≟ height d₁
+... | yes _ = ?
+... | no  _ = ?
+
 raizMenor-post-insercion-caso1 : ∀ {n r} (i d : AB) → (h-valido : HeapValido (bin i r d)) → (n≤k : n ≤ r) → 
                                  raizMenorQueHijos (bin (insertar r i) n d)
 raizMenor-post-insercion-caso1 nil nil h-valido n≤r  = n≤r
 raizMenor-post-insercion-caso1 nil (bin i₁ r₁ d₁) (heap-bin _ _ rmqh) n≤r = (n≤r , ≤-trans n≤r rmqh)
-raizMenor-post-insercion-caso1 {n} {r} (bin i₁ r₁ d₁) nil (heap-bin ival dval rmqh) n≤r with r ≤? r₁ | esPerfecto? i₁ | esPerfecto? d₁ | height i₁ ≟ height d₁
-... | yes r≤r₁ | no ¬iperf | no ¬dperf | yes hi≡hd =  {!   !} 
-... | yes r≤r₁ | no ¬iperf | no ¬dperf | no  _     = {!   !}
-... | yes r≤r₁ | yes iperf | no ¬dperf | yes hi≡hd = {!   !}
-... | yes r≤r₁ | yes iperf | no ¬dperf | no  _     = {!   !}
-... | yes r≤r₁ | yes iperf | yes dperf | yes hi≡hd = {!   !}
-... | yes r≤r₁ | yes iperf | yes dperf | no  _     = {!   !}
-... | yes r≤r₁ | no ¬iperf | yes dperf | yes hi≡hd = {!   !}
-... | yes r≤r₁ | no ¬iperf | yes dperf | no  _     = {!   !}
-... | no  r>r₁ | no ¬iperf | no ¬dperf | yes hi≡hd = {!   !}
-... | no  r>r₁ | no ¬iperf | no ¬dperf | no  _     = {!   !}
-... | no  r>r₁ | yes iperf | no ¬dperf | yes hi≡hd = {!   !}
-... | no  r>r₁ | yes iperf | no ¬dperf | no  _     = {!   !}
-... | no  r>r₁ | yes iperf | yes dperf | yes hi≡hd = {!   !}
-... | no  r>r₁ | yes iperf | yes dperf | no  _     = {!   !}
-... | no  r>r₁ | no ¬iperf | yes dperf | yes hi≡hd = {!   !}
-... | no  r>r₁ | no ¬iperf | yes dperf | no  _     = {!   !}
+-- no podria eliminar casos diciendo que i₁ y d₁ deberian ser nil? dado que la rama derecha es nil
+raizMenor-post-insercion-caso1 {n} {r} (bin i₁ r₁ d₁) nil (heap-bin ival dval rmqh) n≤r with r ≤? r₁ | esPerfecto? i₁ | esPerfecto? d₁
+... | yes r≤r₁ | no ¬iperf | no ¬dperf = n≤r
+... | yes r≤r₁ | yes iperf | no ¬dperf = n≤r
+... | yes r≤r₁ | no ¬iperf | yes dperf = n≤r
+... | yes r≤r₁ | yes iperf | yes dperf = aux₁ i₁ d₁ (extraer-rmqh-heapvalido (heap-valido-su-hijo-izq-es-valido (heap-bin ival dval rmqh))) ? ? iperf dperf
+... | no  r>r₁ | yes iperf | no ¬dperf = ≤-trans n≤r rmqh
+... | no  r>r₁ | no ¬iperf | yes dperf = ≤-trans n≤r rmqh
+... | no  r>r₁ | no ¬iperf | no ¬dperf = ≤-trans n≤r rmqh
+... | no  r>r₁ | yes iperf | yes dperf with height i₁ ≟ height d₁
+...     | yes eq = ≤-trans n≤r rmqh
+...     | no neq = ≤-trans n≤r rmqh
 raizMenor-post-insercion-caso1 {n} {r} (bin i₁ r₁ d₁) (bin i₂ r₂ d₂) (heap-bin ival dval rmqh) n≤r = {!   !}
 
 
