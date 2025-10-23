@@ -250,14 +250,10 @@ hijo-der-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} ()
 insertar-preserva-completo : ∀ {h n} -> Heap h -> esCompleto (insertar n h)
 insertar-preserva-completo h = {!   !}
 
-aux₁ : ∀ {n r r₁} (i₁ d₁ : AB) -> raizMenorQueHijos (bin i₁ r₁ d₁) -> n ≤ r -> r ≤ r₁ -> esPerfecto i₁ -> esPerfecto d₁ -> raizMenorQueHijos (bin (insertar r (bin i₁ r₁ d₁)) n nil)
-aux₁ i₁ d₁ rmqh n≤r r≤r₁ iperf dperf = ?
-
 raizMenor-post-insercion-caso1 : ∀ {n r} (i d : AB) → (h-valido : HeapValido (bin i r d)) → (n≤k : n ≤ r) → 
                                  raizMenorQueHijos (bin (insertar r i) n d)
 raizMenor-post-insercion-caso1 nil nil h-valido n≤r  = n≤r
 raizMenor-post-insercion-caso1 nil (bin i₁ r₁ d₁) (heap-bin _ _ rmqh) n≤r = (n≤r , ≤-trans n≤r rmqh)
--- no podria eliminar casos diciendo que i₁ y d₁ deberian ser nil? dado que la rama derecha es nil
 raizMenor-post-insercion-caso1 {n} {r} (bin i₁ r₁ d₁) nil (heap-bin ival dval rmqh) n≤r with r ≤? r₁ | esPerfecto? i₁ | esPerfecto? d₁ | height i₁ ≟ height d₁
 ... | yes r≤r₁ | no ¬iperf | no ¬dperf | _ = n≤r
 ... | yes r≤r₁ | yes iperf | no ¬dperf | _ = n≤r
@@ -269,7 +265,17 @@ raizMenor-post-insercion-caso1 {n} {r} (bin i₁ r₁ d₁) nil (heap-bin ival d
 ... | no  r>r₁ | no ¬iperf | no ¬dperf | _ = ≤-trans n≤r rmqh
 ... | no  r>r₁ | yes iperf | yes dperf | yes hi≡hd = ≤-trans n≤r rmqh
 ... | no  r>r₁ | yes iperf | yes dperf | no _ = ≤-trans n≤r rmqh
-raizMenor-post-insercion-caso1 {n} {r} (bin i₁ r₁ d₁) (bin i₂ r₂ d₂) (heap-bin ival dval rmqh) n≤r = {!   !}
+raizMenor-post-insercion-caso1 {n} {r} (bin i₁ r₁ d₁) (bin i₂ r₂ d₂) (heap-bin ival dval (r≤r₁ , r≤r₂)) n≤r with r ≤? r₁ | esPerfecto? i₁ | esPerfecto? d₁ | height i₁ ≟ height d₁
+... | yes r≤r₁ | no ¬iperf | no ¬dperf | _ = (n≤r , ≤-trans n≤r r≤r₂)
+... | yes r≤r₁ | yes iperf | no ¬dperf | _ = (n≤r , ≤-trans n≤r r≤r₂)
+... | yes r≤r₁ | no ¬iperf | yes dperf | _ = (n≤r , ≤-trans n≤r r≤r₂)
+... | yes r≤r₁ | yes iperf | yes dperf | yes hi≡hd  = (n≤r , ≤-trans n≤r r≤r₂)
+... | yes r≤r₁ | yes iperf | yes dperf | no hi≡hd+1 = (n≤r , ≤-trans n≤r r≤r₂)
+... | no  r>r₁ | yes iperf | no ¬dperf | _ = ⊥-elim (r>r₁ r≤r₁)
+... | no  r>r₁ | no ¬iperf | yes dperf | _ = ⊥-elim (r>r₁ r≤r₁)
+... | no  r>r₁ | no ¬iperf | no ¬dperf | _ = ⊥-elim (r>r₁ r≤r₁)
+... | no  r>r₁ | yes iperf | yes dperf | yes hi≡hd = ⊥-elim (r>r₁ r≤r₁)
+... | no  r>r₁ | yes iperf | yes dperf | no _ = ⊥-elim (r>r₁ r≤r₁)
 
 
 
@@ -311,20 +317,20 @@ insertar-preserva-validez {bin i r d} {n} h = casesplit
     dheap = heap-su-hijo-der-es-heap h
 
     casesplit : HeapValido (insertar n (bin i r d))
-    casesplit with n ≤? r | esPerfecto? i | esPerfecto? d
+    casesplit with n ≤? r | esPerfecto? i | esPerfecto? d | height i ≟ height d
     -- No se como hacer para que agda me tome la syntax con el doble with anidado. Definitivamente no quiero 
     -- hacer la pregunta de height para TODAS las ramas. En la de abajo sirve
-    ... | yes n≤r | yes iperf | yes dperf = {!   !}
-    ... | yes n≤r | yes iperf | no ¬dperf = heap-bin ival (insertar-preserva-validez dheap) (raizMenor-post-insercion-caso5 i d hval n≤r)
-    ... | yes n≤r | no ¬iperf | yes dperf = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso1 i d hval n≤r)
-    ... | yes n≤r | no ¬iperf | no ¬dperf = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso1 i d hval n≤r)
+    ... | yes n≤r | yes iperf | yes dperf | yes _ = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso1 i d hval n≤r)
+    ... | yes n≤r | yes iperf | yes dperf | no  _ = heap-bin ival (insertar-preserva-validez dheap) (raizMenor-post-insercion-caso5 i d hval n≤r)
+    ... | yes n≤r | yes iperf | no ¬dperf | _     = heap-bin ival (insertar-preserva-validez dheap) (raizMenor-post-insercion-caso5 i d hval n≤r)
+    ... | yes n≤r | no ¬iperf | yes dperf | _     = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso1 i d hval n≤r)
+    ... | yes n≤r | no ¬iperf | no ¬dperf | _     = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso1 i d hval n≤r)
 
-    ... | no  n>r | yes iperf | no ¬dperf = heap-bin ival (insertar-preserva-validez dheap) (raizMenor-post-insercion-caso3 i d hval n>r)
-    ... | no  n>r | no ¬iperf | yes dperf = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso2 i d hval n>r)
-    ... | no  n>r | no ¬iperf | no ¬dperf = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso2 i d hval n>r)
-    ... | no  n>r | yes iperf | yes dperf with height i ≟ height d
-    ...     | yes hi≡hd = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso2 i d hval n>r)
-    ...     | no  _     = heap-bin ival (insertar-preserva-validez dheap) (raizMenor-post-insercion-caso3 i d hval n>r)
+    ... | no  n>r | yes iperf | no ¬dperf | _     = heap-bin ival (insertar-preserva-validez dheap) (raizMenor-post-insercion-caso3 i d hval n>r)
+    ... | no  n>r | no ¬iperf | yes dperf | _     = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso2 i d hval n>r)
+    ... | no  n>r | no ¬iperf | no ¬dperf | _     = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso2 i d hval n>r)
+    ... | no  n>r | yes iperf | yes dperf | yes _ = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso2 i d hval n>r)
+    ... | no  n>r | yes iperf | yes dperf | no  _ = heap-bin ival (insertar-preserva-validez dheap) (raizMenor-post-insercion-caso3 i d hval n>r)
 
 insertar-preserva-invariante : ∀ {h n} -> Heap h -> Heap (insertar n h)
 insertar-preserva-invariante {nil} {n} _ = record
