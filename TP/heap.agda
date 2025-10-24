@@ -7,6 +7,7 @@ open import Data.Unit using (⊤; tt)
 open import Data.Product using (_×_; _,_; ∃-syntax; proj₁; proj₂)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Function using (case_of_)
+open import Function using (_∘_)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq.≡-Reasoning
 open import Relation.Binary.PropositionalEquality using (subst)
@@ -205,6 +206,10 @@ insertar n (bin i r d) with n ≤? r | esPerfecto? i | esPerfecto? d | height i 
      -- Si la altura es igual y ambos son perfectos, insertamos en i. Si i es mas alto, insertamos en dk
 ... | no  n>r | yes iperf | yes dperf | no _ = bin i r (insertar n d)
 
+heap-completo-alguno-de-sus-hijos-es-perfecto : ∀ {i r d} -> esCompleto (bin i r d) -> (esPerfecto i -> ⊥) -> (esPerfecto d -> ⊥) -> ⊥
+heap-completo-alguno-de-sus-hijos-es-perfecto (inj₁ (_ , iperf , _)) ¬iperf _ = ¬iperf iperf
+heap-completo-alguno-de-sus-hijos-es-perfecto (inj₂ (_ , _ , dperf)) _ ¬dperf = ¬dperf dperf
+
 hijo-izq : AB -> AB
 hijo-izq nil = nil
 hijo-izq (bin i r d) = i
@@ -213,12 +218,34 @@ hijo-der : AB -> AB
 hijo-der nil = nil
 hijo-der (bin i r d) = d
 
-insertar-en-¬perf-mantiene-altura : ∀ {i r} -> (esPerfecto i -> ⊥) -> height (insertar r i) ≡ height i
-insertar-en-¬perf-mantiene-altura {i} {r} = {!   !}
 
-insertar-en-perf-aumenta-altura : ∀ {a k} -> esPerfecto a -> height (insertar k a) ≡ suc (height a)
+insertar-en-perf-aumenta-altura : ∀ {a n} -> esPerfecto a -> height (insertar n a) ≡ suc (height a)
 insertar-en-perf-aumenta-altura {nil}       perf = refl
 insertar-en-perf-aumenta-altura {bin i r d} {k} (hi≡hd , iperf , dperf) = {!   !}
+
+
+insertar-en-¬perf-mantiene-altura : ∀ {a n} -> esCompleto a -> (esPerfecto a -> ⊥) -> height (insertar n a) ≡ height a
+insertar-en-¬perf-mantiene-altura {nil} _ ¬perf = ⊥-elim (¬perf tt)
+insertar-en-¬perf-mantiene-altura {bin i₁ r₁ d₁} {r} comp ¬perf 
+  with r ≤? r₁ | esPerfecto? i₁ | esPerfecto? d₁ | height i₁ ≟ height d₁
+-- ABS: ambos perfectos y misma altura → absurdo
+... | _  | yes iperf | yes dperf | yes hi≡hd = ⊥-elim (¬perf (hi≡hd , iperf , dperf))
+-- ABS: alguno de los dos debe ser perfecto
+... | _ | no ¬iperf | no ¬dperf | _ = ⊥-elim (heap-completo-alguno-de-sus-hijos-es-perfecto {r = r₁} comp ¬iperf ¬dperf)
+-- Caso: ambos perfectos pero distinta altura → insertamos en d₁
+... | yes r≤r₁ | yes iperf | yes dperf | no  hi≠hd = cong suc ({!   !})
+-- Caso: i perfecto, d no perfecto → insertamos en d₁
+... | yes r≤r₁ | yes iperf | no ¬dperf | _  = {!   !}
+-- Caso: i no perfecto → insertamos en i₁
+  --rewrite insertar-en-¬perf-mantiene-altura {n = r₁} ¬iperf = ?
+... | yes r≤r₁ | no ¬iperf | yes dperf | _ = {!   !}
+-- Caso: r > r₁, ambos perfectos pero distinta altura → insertamos en d₁
+... | no r>r₁ | yes iperf | yes dperf | no  hi≠hd 
+  rewrite insertar-en-perf-aumenta-altura {n = r} dperf = {!   !}
+-- Caso: r > r₁, i perfecto, d no perfecto → insertamos en d₁
+... | no r>r₁ | yes iperf | no ¬dperf | _ = {!   !}
+-- Caso: r > r₁, i no perfecto → insertamos en i₁
+... | no r>r₁ | no ¬iperf | _ | _ = {!   !}
 
 es-nil-es-valido : ∀ {i} -> esNil i -> HeapValido i
 es-nil-es-valido {nil} esnil = heap-nil
@@ -261,10 +288,6 @@ si-difieren-en-altura-i-es-d+1 : ∀ {i r d} -> esCompleto (bin i r d) -> (heigh
 si-difieren-en-altura-i-es-d+1 (inj₁ (hi≡hd , _ , _)) hi≠hd = ⊥-elim (hi≠hd hi≡hd)
 si-difieren-en-altura-i-es-d+1 (inj₂ (hi≡hd+1 , _ , _)) hi≠hd = hi≡hd+1
 
-heap-completo-alguno-de-sus-hijos-es-perfecto : ∀ {i r d} -> esCompleto (bin i r d) -> (esPerfecto i -> ⊥) -> (esPerfecto d -> ⊥) -> ⊥
-heap-completo-alguno-de-sus-hijos-es-perfecto (inj₁ (_ , iperf , _)) ¬iperf _ = ¬iperf iperf
-heap-completo-alguno-de-sus-hijos-es-perfecto (inj₂ (_ , _ , dperf)) _ ¬dperf = ¬dperf dperf
-
 insertar-preserva-completo : ∀ {a n} -> Heap a -> esCompleto (insertar n a)
 insertar-preserva-completo {nil} {n} h = inj₁ (refl , tt , tt) 
 insertar-preserva-completo {bin i r d} {n} h = casesplit
@@ -285,15 +308,15 @@ insertar-preserva-completo {bin i r d} {n} h = casesplit
     casesplit with n ≤? r | esPerfecto? i | esPerfecto? d | height i ≟ height d
     -- absurdo, alguno de los dos deberia ser perfecto
     ... | _        | no ¬iperf | no ¬dperf | _         = ⊥-elim (heap-completo-alguno-de-sus-hijos-es-perfecto {i} {r} {d} todocomp ¬iperf ¬dperf)
-    ... | yes r≤r₁ | yes iperf | no ¬dperf | yes hi≡hd = inj₁ (? , iperf , (insertar-preserva-completo dheap))
+    ... | yes r≤r₁ | yes iperf | no ¬dperf | yes hi≡hd = inj₁ ({!   !} , iperf , (insertar-preserva-completo dheap))
     ... | yes r≤r₁ | yes iperf | no ¬dperf | no  hi≠hd = inj₁ ({!   !} , iperf , (insertar-preserva-completo dheap))
-    ... | no  r>r₁ | yes iperf | no ¬dperf | _         = inj₁ (? , iperf , (insertar-preserva-completo dheap))
+    ... | no  r>r₁ | yes iperf | no ¬dperf | _         = inj₁ ({!   !} , iperf , (insertar-preserva-completo dheap))
     ... | yes r≤r₁ | yes iperf | yes dperf | yes hi≡hd = inj₂ (trans (insertar-en-perf-aumenta-altura iperf) (cong suc hi≡hd) , (insertar-preserva-completo iheap) , dperf)
     ... | yes r≤r₁ | yes iperf | yes dperf | no  hi≠hd = inj₁ (trans (si-difieren-en-altura-i-es-d+1 {r = r} todocomp hi≠hd) (sym (insertar-en-perf-aumenta-altura dperf)) , iperf , (insertar-preserva-completo dheap))
     -- este caso es absurdo. No puede ser que ¬iperf, dperf y hi≡hd
-    ... | _        | no ¬iperf | yes dperf | yes hi≡hd = ⊥-elim ?
-    ... | yes r≤r₁ | no ¬iperf | yes dperf | no  hi≠hd = inj₂ (trans (insertar-en-¬perf-mantiene-altura ¬iperf) (si-difieren-en-altura-i-es-d+1 {r = r} todocomp hi≠hd) , (insertar-preserva-completo iheap) , dperf)
-    ... | no  r>r₁ | no ¬iperf | yes dperf | no  hi≠hd = inj₂ (trans (insertar-en-¬perf-mantiene-altura ¬iperf) (si-difieren-en-altura-i-es-d+1 {r = n} todocomp hi≠hd) , (insertar-preserva-completo iheap) , dperf)
+    ... | _        | no ¬iperf | yes dperf | yes hi≡hd = ⊥-elim {!   !}
+    ... | yes r≤r₁ | no ¬iperf | yes dperf | no  hi≠hd = inj₂ (trans (insertar-en-¬perf-mantiene-altura icomp ¬iperf) (si-difieren-en-altura-i-es-d+1 {r = r} todocomp hi≠hd) , (insertar-preserva-completo iheap) , dperf)
+    ... | no  r>r₁ | no ¬iperf | yes dperf | no  hi≠hd = inj₂ (trans (insertar-en-¬perf-mantiene-altura icomp ¬iperf) (si-difieren-en-altura-i-es-d+1 {r = n} todocomp hi≠hd) , (insertar-preserva-completo iheap) , dperf)
     ... | no  r>r₁ | yes iperf | yes dperf | yes hi≡hd = inj₂ (trans (insertar-en-perf-aumenta-altura iperf) (cong suc hi≡hd) , (insertar-preserva-completo iheap) , dperf)
     ... | no  r>r₁ | yes iperf | yes dperf | no  hi≠hd = inj₁ (trans (si-difieren-en-altura-i-es-d+1 {r = n} todocomp hi≠hd) (sym (insertar-en-perf-aumenta-altura dperf)) , iperf , (insertar-preserva-completo dheap))
 
@@ -369,8 +392,6 @@ insertar-preserva-validez {bin i r d} {n} h = casesplit
 
     casesplit : HeapValido (insertar n (bin i r d))
     casesplit with n ≤? r | esPerfecto? i | esPerfecto? d | height i ≟ height d
-    -- No se como hacer para que agda me tome la syntax con el doble with anidado. Definitivamente no quiero 
-    -- hacer la pregunta de height para TODAS las ramas. En la de abajo sirve
     ... | yes n≤r | yes iperf | yes dperf | yes _ = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso1 i d hval n≤r)
     ... | yes n≤r | yes iperf | yes dperf | no  _ = heap-bin ival (insertar-preserva-validez dheap) (raizMenor-post-insercion-caso5 i d hval n≤r)
     ... | yes n≤r | yes iperf | no ¬dperf | _     = heap-bin ival (insertar-preserva-validez dheap) (raizMenor-post-insercion-caso5 i d hval n≤r)
