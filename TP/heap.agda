@@ -285,13 +285,15 @@ insertar-preserva-completo {bin i r d} {n} h = casesplit
     casesplit with n ≤? r | esPerfecto? i | esPerfecto? d | height i ≟ height d
     -- absurdo, alguno de los dos deberia ser perfecto
     ... | _        | no ¬iperf | no ¬dperf | _         = ⊥-elim (heap-completo-alguno-de-sus-hijos-es-perfecto {i} {r} {d} todocomp ¬iperf ¬dperf)
-    ... | yes r≤r₁ | yes iperf | no ¬dperf | yes hi≡hd = inj₁ ({!   !} , iperf , (insertar-preserva-completo dheap))
+    ... | yes r≤r₁ | yes iperf | no ¬dperf | yes hi≡hd = inj₁ (? , iperf , (insertar-preserva-completo dheap))
     ... | yes r≤r₁ | yes iperf | no ¬dperf | no  hi≠hd = inj₁ ({!   !} , iperf , (insertar-preserva-completo dheap))
-    ... | yes r≤r₁ | no ¬iperf | yes dperf | _         = {!   !}
+    ... | no  r>r₁ | yes iperf | no ¬dperf | _         = inj₁ (? , iperf , (insertar-preserva-completo dheap))
     ... | yes r≤r₁ | yes iperf | yes dperf | yes hi≡hd = inj₂ (trans (insertar-en-perf-aumenta-altura iperf) (cong suc hi≡hd) , (insertar-preserva-completo iheap) , dperf)
     ... | yes r≤r₁ | yes iperf | yes dperf | no  hi≠hd = inj₁ (trans (si-difieren-en-altura-i-es-d+1 {r = r} todocomp hi≠hd) (sym (insertar-en-perf-aumenta-altura dperf)) , iperf , (insertar-preserva-completo dheap))
-    ... | no  r>r₁ | yes iperf | no ¬dperf | _         = {!   !}
-    ... | no  r>r₁ | no ¬iperf | yes dperf | _         = {!   !} 
+    -- este caso es absurdo. No puede ser que ¬iperf, dperf y hi≡hd
+    ... | _        | no ¬iperf | yes dperf | yes hi≡hd = ⊥-elim ?
+    ... | yes r≤r₁ | no ¬iperf | yes dperf | no  hi≠hd = inj₂ (trans (insertar-en-¬perf-mantiene-altura ¬iperf) (si-difieren-en-altura-i-es-d+1 {r = r} todocomp hi≠hd) , (insertar-preserva-completo iheap) , dperf)
+    ... | no  r>r₁ | no ¬iperf | yes dperf | no  hi≠hd = inj₂ (trans (insertar-en-¬perf-mantiene-altura ¬iperf) (si-difieren-en-altura-i-es-d+1 {r = n} todocomp hi≠hd) , (insertar-preserva-completo iheap) , dperf)
     ... | no  r>r₁ | yes iperf | yes dperf | yes hi≡hd = inj₂ (trans (insertar-en-perf-aumenta-altura iperf) (cong suc hi≡hd) , (insertar-preserva-completo iheap) , dperf)
     ... | no  r>r₁ | yes iperf | yes dperf | no  hi≠hd = inj₁ (trans (si-difieren-en-altura-i-es-d+1 {r = n} todocomp hi≠hd) (sym (insertar-en-perf-aumenta-altura dperf)) , iperf , (insertar-preserva-completo dheap))
 
