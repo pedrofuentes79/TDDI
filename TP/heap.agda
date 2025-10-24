@@ -145,6 +145,7 @@ heap-valido-su-hijo-izq-es-valido (heap-bin ival _ _ ) = ival
 heap-valido-su-hijo-der-es-valido : ∀ {i r d} -> HeapValido (bin i r d) -> HeapValido d
 heap-valido-su-hijo-der-es-valido (heap-bin _ dval _) = dval
 
+
 heap-valido-con-raiz-aun-menor-es-valido : ∀ {i r d r₁} -> HeapValido (bin i r d) -> r₁ ≤ r -> raizMenorQueHijos (bin i r₁ d)
 heap-valido-con-raiz-aun-menor-es-valido {nil} {r} {nil} {r₁} (heap-bin ival dval rmqh) r₁≤r                = tt
 heap-valido-con-raiz-aun-menor-es-valido {nil} {r} {bin i₃ r₃ d₃} {r₁} (heap-bin ival dval rmqh) r₁≤r       = (≤-trans r₁≤r rmqh)
@@ -154,6 +155,15 @@ heap-valido-con-raiz-aun-menor-es-valido {bin i₂ r₂ d₂} {r} {bin i₃ r₃
 extraer-esCompleto : ∀ {h} -> HeapCompleto h -> esCompleto h
 extraer-esCompleto completo-nil = tt
 extraer-esCompleto (completo-bin h comp) = comp
+
+
+heap-completo-su-hijo-der-es-completo : ∀ {i r d} -> HeapCompleto (bin i r d) -> esCompleto d
+heap-completo-su-hijo-der-es-completo (completo-bin _ (inj₁ (_ , _ , dcomp))) = dcomp 
+heap-completo-su-hijo-der-es-completo (completo-bin _ (inj₂ (_ , _ , dperf))) = perfecto-implica-completo dperf
+
+heap-completo-su-hijo-izq-es-completo : ∀ {i r d} -> HeapCompleto (bin i r d) -> esCompleto i
+heap-completo-su-hijo-izq-es-completo (completo-bin _ (inj₁ (_ , iperf , _))) = perfecto-implica-completo iperf
+heap-completo-su-hijo-izq-es-completo (completo-bin _ (inj₂ (_ , icomp , _))) = icomp
 
 heap-su-hijo-izq-es-heap : ∀ {i r d} -> Heap (bin i r d) -> Heap i
 heap-su-hijo-izq-es-heap {i} {r} {d} h = record 
@@ -247,8 +257,47 @@ hijo-der-nil-de-altura-1 {nil} {r} {bin i₂ r₂ d₂} ()
 hijo-der-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {nil} ()
 hijo-der-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} ()
 
-insertar-preserva-completo : ∀ {h n} -> Heap h -> esCompleto (insertar n h)
-insertar-preserva-completo h = {!   !}
+si-difieren-en-altura-i-es-d+1 : ∀ {i r d} -> esCompleto (bin i r d) -> (height i ≡ height d -> ⊥) -> height i ≡ suc (height d)
+si-difieren-en-altura-i-es-d+1 (inj₁ (hi≡hd , _ , _)) hi≠hd = ⊥-elim (hi≠hd hi≡hd)
+si-difieren-en-altura-i-es-d+1 (inj₂ (hi≡hd+1 , _ , _)) hi≠hd = hi≡hd+1
+
+heap-completo-alguno-de-sus-hijos-es-perfecto : ∀ {i r d} -> esCompleto (bin i r d) -> (esPerfecto i -> ⊥) -> (esPerfecto d -> ⊥) -> ⊥
+heap-completo-alguno-de-sus-hijos-es-perfecto (inj₁ (_ , iperf , _)) ¬iperf _ = ¬iperf iperf
+heap-completo-alguno-de-sus-hijos-es-perfecto (inj₂ (_ , _ , dperf)) _ ¬dperf = ¬dperf dperf
+
+insertar-preserva-completo : ∀ {a n} -> Heap a -> esCompleto (insertar n a)
+insertar-preserva-completo {nil} {n} h = inj₁ (refl , tt , tt) 
+insertar-preserva-completo {bin i r d} {n} h = casesplit
+  where
+    todocomp : esCompleto (bin i r d)
+    todocomp = extraer-esCompleto (Heap.completo h)
+    iheap : Heap i
+    iheap = heap-su-hijo-izq-es-heap h
+    dheap : Heap d
+    dheap = heap-su-hijo-der-es-heap h
+    dcomp : esCompleto d
+    dcomp = heap-completo-su-hijo-der-es-completo (Heap.completo h)
+    icomp : esCompleto i
+    icomp = heap-completo-su-hijo-izq-es-completo (Heap.completo h)
+
+
+    casesplit : esCompleto (insertar n (bin i r d))
+    casesplit with n ≤? r | esPerfecto? i | esPerfecto? d | height i ≟ height d
+    -- absurdo, alguno de los dos deberia ser perfecto
+    ... | _        | no ¬iperf | no ¬dperf | _         = ⊥-elim (heap-completo-alguno-de-sus-hijos-es-perfecto {i} {r} {d} todocomp ¬iperf ¬dperf)
+    ... | yes r≤r₁ | yes iperf | no ¬dperf | yes hi≡hd = inj₁ ({!   !} , iperf , (insertar-preserva-completo dheap))
+    ... | yes r≤r₁ | yes iperf | no ¬dperf | no  hi≠hd = inj₁ ({!   !} , iperf , (insertar-preserva-completo dheap))
+    ... | yes r≤r₁ | no ¬iperf | yes dperf | _         = {!   !}
+    ... | yes r≤r₁ | yes iperf | yes dperf | yes hi≡hd = inj₂ (trans (insertar-en-perf-aumenta-altura iperf) (cong suc hi≡hd) , (insertar-preserva-completo iheap) , dperf)
+    ... | yes r≤r₁ | yes iperf | yes dperf | no  hi≠hd = inj₁ (trans (si-difieren-en-altura-i-es-d+1 {r = r} todocomp hi≠hd) (sym (insertar-en-perf-aumenta-altura dperf)) , iperf , (insertar-preserva-completo dheap))
+    ... | no  r>r₁ | yes iperf | no ¬dperf | _         = {!   !}
+    ... | no  r>r₁ | no ¬iperf | yes dperf | _         = {!   !} 
+    ... | no  r>r₁ | yes iperf | yes dperf | yes hi≡hd = inj₂ (trans (insertar-en-perf-aumenta-altura iperf) (cong suc hi≡hd) , (insertar-preserva-completo iheap) , dperf)
+    ... | no  r>r₁ | yes iperf | yes dperf | no  hi≠hd = inj₁ (trans (si-difieren-en-altura-i-es-d+1 {r = n} todocomp hi≠hd) (sym (insertar-en-perf-aumenta-altura dperf)) , iperf , (insertar-preserva-completo dheap))
+
+
+
+
 
 raizMenor-post-insercion-caso1 : ∀ {n r} (i d : AB) → (h-valido : HeapValido (bin i r d)) → (n≤k : n ≤ r) → 
                                  raizMenorQueHijos (bin (insertar r i) n d)
@@ -281,21 +330,21 @@ raizMenor-post-insercion-caso1 {n} {r} (bin i₁ r₁ d₁) (bin i₂ r₂ d₂)
 
 raizMenor-post-insercion-caso2 : ∀ {n r} (i d : AB) → (h-valido : HeapValido (bin i r d)) → (n>r : (n ≤ r -> ⊥)) → 
                                  raizMenorQueHijos (bin (insertar n i) r d)
-raizMenor-post-insercion-caso2 = ?
+raizMenor-post-insercion-caso2 = {!   !}
 
 raizMenor-post-insercion-caso3 : ∀ {n r} (i d : AB) → (h-valido : HeapValido (bin i r d)) → (n>r : (n ≤ r -> ⊥)) → 
                                  raizMenorQueHijos (bin i r (insertar n d))
-raizMenor-post-insercion-caso3 = ?
+raizMenor-post-insercion-caso3 = {!   !}
 
 
 raizMenor-post-insercion-caso4 : ∀ {n r} (i d : AB) → (h-valido : HeapValido (bin i r d)) → (n>r : (n ≤ r -> ⊥)) → 
                                  raizMenorQueHijos (bin i n (insertar r d))
-raizMenor-post-insercion-caso4 = ?
+raizMenor-post-insercion-caso4 = {!   !}
 
 
 raizMenor-post-insercion-caso5 : ∀ {n r} (i d : AB) → (h-valido : HeapValido (bin i r d)) → (n>r : n ≤ r) → 
                                  raizMenorQueHijos (bin i n (insertar r d))
-raizMenor-post-insercion-caso5 = ?
+raizMenor-post-insercion-caso5 = {!   !}
 
 insertar-preserva-validez : ∀ {a n} -> Heap a -> HeapValido (insertar n a)
 insertar-preserva-validez {nil} h = heap-bin heap-nil heap-nil tt 
