@@ -16,9 +16,6 @@ open import Relation.Binary.PropositionalEquality using (subst)
 absurdo₁ : {a b : ℕ} -> a ≡ b -> a ≡ suc b -> ⊥
 absurdo₁ refl ()
 
-zero-no-es-suc : {a : ℕ} -> zero ≡ suc a -> ⊥ 
-zero-no-es-suc ()
-
 >-es-≤ : {a b : ℕ} -> (a ≤ b -> ⊥) -> b ≤ a
 >-es-≤ {a} {b} a>b with ≤-total a b
 ... | inj₁ a≤b = ⊥-elim (a>b a≤b)
@@ -28,11 +25,6 @@ zero-no-es-suc ()
 <-es-≤ {a} {b} a<b with ≤-total a b
 ... | inj₁ a≤b = a≤b
 ... | inj₂ b≤a = ⊥-elim (a<b b≤a)
-
--- Caso absurdo en siftUp: r ≤ r₁ ∧ r₁ ≤ r₂ ∧ ¬(r ≤ r₂)
--- Por transitividad: r ≤ r₁ ≤ r₂ implica r ≤ r₂, contradicción
-absurdo₂ : {r r₁ r₂ : ℕ} -> r ≤ r₁ -> r₁ ≤ r₂ -> ¬ (r ≤ r₂) -> ⊥
-absurdo₂ r≤r₁ r₁≤r₂ r₂<r = r₂<r (≤-trans r≤r₁ r₁≤r₂)
 
 -- definimos una estructura base de arbol binario
 data AB : Set where
@@ -48,26 +40,9 @@ raizMenorQueHijos (bin (bin i r₁ d) r nil) = r ≤ r₁
 raizMenorQueHijos (bin nil r (bin i r₁ d)) = r ≤ r₁
 raizMenorQueHijos (bin (bin i₁ r₁ d₁) r (bin i₂ r₂ d₂)) = (r ≤ r₁) × (r ≤ r₂)
 
--- queda definir "extraerMax" (que viene de la mano con siftDown?)
--- Propiedades
--- siftDown-corrige
--- extraer-max-preserva-heap
-
-raizDe : AB -> ℕ
-raizDe nil           = 0
-raizDe (bin _ r _) = r
-
-setRaiz : AB -> ℕ -> AB
-setRaiz nil           n = bin nil n nil
-setRaiz (bin i _ d) n = bin i n d
-
 height : AB -> ℕ
 height nil = zero
 height (bin i r d) = suc (height i ⊔ height d)
-
-size : AB -> ℕ
-size nil = 0
-size (bin i r d) = 1 + size i + size d
 
 -- un árbol es perfecto si ambos subárboles tienen la misma altura y son perfectos
 esPerfecto : AB -> Set
@@ -91,36 +66,9 @@ esCompleto (bin i r d) =
   ⊎ 
   (height i ≡ suc (height d) × esCompleto i × esPerfecto d)
 
-esCompleto? : (h : AB) -> Dec (esCompleto h)
-esCompleto? nil = yes tt 
--- Esto es realmente asqueroso. Pido disculpas. Pero no le pude encontrar la vuelta de sintaxis para escribirlo bien
-esCompleto? (bin i r d) with height i ≟ height d | esPerfecto? i | esCompleto? d | height i ≟ suc (height d) | esCompleto? i | esPerfecto? d
--- Caso: misma altura, i perfecto, d completo
-... | yes eq | yes iperf | yes dcomp | _       | _         | _         = yes (inj₁ (eq , iperf , dcomp))
--- Caso: misma altura, i no perfecto
-... | yes eq | no ¬iperf | _         | _       | _         | _         = no λ { (inj₁ (_ , iperf , _)) -> ¬iperf iperf ; (inj₂ (eq' , _ , _)) -> absurdo₁ eq eq' }
--- Caso: misma altura, d no completo
-... | yes eq | _         | no ¬dcomp | _       | _         | _         = no λ { (inj₁ (_ , _ , dcomp)) -> ¬dcomp dcomp ; (inj₂ (eq' , _ , _)) -> absurdo₁ eq eq' }
--- Caso: distinta altura pero la correcta, i completo, d perfecto
-... | no ¬eq | _         | _         | yes eq' | yes icomp | yes dperf = yes (inj₂ (eq' , icomp , dperf)) 
--- Caso: distinta altura pero la correcta, i no completo
-... | no ¬eq | _         | _         | yes eq' | no ¬icomp | _         = no λ { (inj₁ (eq , _ , _)) -> ¬eq eq ; (inj₂ (_ , icomp , _)) -> ¬icomp icomp }
--- Caso: distinta altura pero la correcta, d no perfecto
-... | no ¬eq | _         | _         | yes eq' | _         | no ¬dperf = no λ { (inj₁ (eq , _ , _)) -> ¬eq eq ; (inj₂ (_ , _ , dperf)) -> ¬dperf dperf }
--- Caso: alturas incorrectas
-... | no ¬eq | _         | _         | no ¬eq' | _         | _         = no λ { (inj₁ (eq , _ , _)) -> ¬eq eq ; (inj₂ (eq' , _ , _)) -> ¬eq' eq' }
-
 perfecto-implica-completo : ∀ {a} -> esPerfecto a -> esCompleto a
 perfecto-implica-completo {nil} perf = tt
 perfecto-implica-completo {bin i r d} (hi≡hd , iperf , dperf) = inj₁ (hi≡hd , iperf , perfecto-implica-completo dperf) 
-
-esNil : (h : AB) -> Set
-esNil nil = ⊤
-esNil (bin i r d) = ⊥
-
-esNil? : (h : AB) -> Dec (esNil h)
-esNil? nil = yes tt
-esNil? (bin i r d) = no λ { () }
 
 
 data HeapValido : AB -> Set where
@@ -144,13 +92,6 @@ heap-valido-su-hijo-izq-es-valido (heap-bin ival _ _ ) = ival
 
 heap-valido-su-hijo-der-es-valido : ∀ {i r d} -> HeapValido (bin i r d) -> HeapValido d
 heap-valido-su-hijo-der-es-valido (heap-bin _ dval _) = dval
-
-
-heap-valido-con-raiz-aun-menor-es-valido : ∀ {i r d r₁} -> HeapValido (bin i r d) -> r₁ ≤ r -> raizMenorQueHijos (bin i r₁ d)
-heap-valido-con-raiz-aun-menor-es-valido {nil} {r} {nil} {r₁} (heap-bin ival dval rmqh) r₁≤r                = tt
-heap-valido-con-raiz-aun-menor-es-valido {nil} {r} {bin i₃ r₃ d₃} {r₁} (heap-bin ival dval rmqh) r₁≤r       = (≤-trans r₁≤r rmqh)
-heap-valido-con-raiz-aun-menor-es-valido {bin i₂ r₂ d₂} {r} {nil} {r₁} (heap-bin ival dval rmqh) r₁≤r       = (≤-trans r₁≤r rmqh)
-heap-valido-con-raiz-aun-menor-es-valido {bin i₂ r₂ d₂} {r} {bin i₃ r₃ d₃} {r₁} (heap-bin ival dval (r≤r₂ , r≤r₃)) r₁≤r = (≤-trans r₁≤r r≤r₂ , ≤-trans r₁≤r r≤r₃)
 
 extraer-esCompleto : ∀ {h} -> HeapCompleto h -> esCompleto h
 extraer-esCompleto completo-nil = tt
@@ -209,18 +150,9 @@ heap-completo-alguno-de-sus-hijos-es-perfecto : ∀ {i r d} -> esCompleto (bin i
 heap-completo-alguno-de-sus-hijos-es-perfecto (inj₁ (_ , iperf , _)) ¬iperf _ = ¬iperf iperf
 heap-completo-alguno-de-sus-hijos-es-perfecto (inj₂ (_ , _ , dperf)) _ ¬dperf = ¬dperf dperf
 
-hijo-izq : AB -> AB
-hijo-izq nil = nil
-hijo-izq (bin i r d) = i
-
-hijo-der : AB -> AB
-hijo-der nil = nil
-hijo-der (bin i r d) = d
-
 si-difieren-en-altura-i-es-d+1 : ∀ {i r d} -> esCompleto (bin i r d) -> (height i ≡ height d -> ⊥) -> height i ≡ suc (height d)
 si-difieren-en-altura-i-es-d+1 (inj₁ (hi≡hd , _ , _)) hi≠hd = ⊥-elim (hi≠hd hi≡hd)
 si-difieren-en-altura-i-es-d+1 (inj₂ (hi≡hd+1 , _ , _)) hi≠hd = hi≡hd+1
-
 
 insertar-en-perf-aumenta-altura : ∀ {a n} -> esPerfecto a -> height (insertar n a) ≡ suc (height a)
 insertar-en-perf-aumenta-altura {nil}       perf = refl
@@ -315,43 +247,6 @@ insertar-en-¬perf-mantiene-altura {bin i₁ r₁ d₁} {r} comp ¬perf
 ... | yes r≤r₁ | no ¬iperf | yes dperf | _ = cong suc (cong (_⊔ height d₁) (insertar-en-¬perf-mantiene-altura (heap-completo-su-hijo-izq-es-completo (completo-bin (bin i₁ r₁ d₁) comp)) ¬iperf))
 -- Misma demo.
 ... | no  r>r₁ | no ¬iperf | yes dperf | _ = cong suc (cong (_⊔ height d₁) (insertar-en-¬perf-mantiene-altura (heap-completo-su-hijo-izq-es-completo (completo-bin (bin i₁ r₁ d₁) comp)) ¬iperf))
-
-es-nil-es-valido : ∀ {i} -> esNil i -> HeapValido i
-es-nil-es-valido {nil} esnil = heap-nil
-es-nil-es-valido {bin i r d} ()
-
-raiz-es-menor-que-nil : ∀ {i r d} -> esNil i -> esNil d -> raizMenorQueHijos (bin i r d)
-raiz-es-menor-que-nil {nil} {_} {nil} inil dnil = tt
-raiz-es-menor-que-nil {bin i₁ r₁ d₁} () 
-
--- Esto nos dice que, si i es un bin (no nil) y bin i r nil es completo, entonces i tiene altura 1
-completo-bin-nil-aux : ∀ {i₁ r₁ d₁ r} -> esCompleto (bin (bin i₁ r₁ d₁) r nil) -> height (bin i₁ r₁ d₁) ≡ 1
-completo-bin-nil-aux {i₁} {r₁} {d₁} {r} (inj₁ (() , _ , _)) -- no puede pasar...
-completo-bin-nil-aux {i₁} {r₁} {d₁} {r} (inj₂ (hi≡suc_heightnil , _ , _)) = hi≡suc_heightnil
-
--- Extrae esCompleto del hijo izquierdo cuando el derecho es nil
--- en particular, i₁ y d₁ deben ser nil tambien
-extraer-completo-izq : ∀ {i₁ r₁ d₁ r} -> esCompleto (bin (bin i₁ r₁ d₁) r nil) -> esCompleto (bin i₁ r₁ d₁)
-extraer-completo-izq (inj₁ (() , _ , _))
-extraer-completo-izq (inj₂ (_ , inj₁ (hi≡hd , iperf , dcomp) , _)) = inj₁ (hi≡hd , iperf , dcomp)
-extraer-completo-izq (inj₂ (_ , inj₂ (hi≡hd+1 , icomp , dperf) , _)) = inj₂ (hi≡hd+1 , icomp , dperf)
-
-extraer-rmqh-heapvalido : ∀ {a} -> HeapValido a -> raizMenorQueHijos a
-extraer-rmqh-heapvalido heap-nil = tt
-extraer-rmqh-heapvalido (heap-bin _ _ rmqh) = rmqh
-
--- Auxiliares para extraer que los hijos son nil
-hijo-izq-nil-de-altura-1 : ∀ {i r d} -> height (bin i r d) ≡ 1 -> esNil i
-hijo-izq-nil-de-altura-1 {nil} {r} {nil} refl = tt
-hijo-izq-nil-de-altura-1 {nil} {r} {bin i₂ r₂ d₂} ()
-hijo-izq-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {nil} ()
-hijo-izq-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} ()
-
-hijo-der-nil-de-altura-1 : ∀ {i r d} -> height (bin i r d) ≡ 1 -> esNil d
-hijo-der-nil-de-altura-1 {nil} {r} {nil} refl = tt
-hijo-der-nil-de-altura-1 {nil} {r} {bin i₂ r₂ d₂} ()
-hijo-der-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {nil} ()
-hijo-der-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} ()
 
 completo-hi≠hd-implica-dperf : ∀ {i r d} -> esCompleto (bin i r d) -> (height i ≡ height d -> ⊥) -> esPerfecto d
 completo-hi≠hd-implica-dperf (inj₁ (hi≡hd , _ , _))     hi≠hd = ⊥-elim (hi≠hd hi≡hd)
