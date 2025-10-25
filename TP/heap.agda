@@ -425,25 +425,109 @@ raizMenor-post-insercion-caso1 {n} {r} (bin i₁ r₁ d₁) (bin i₂ r₂ d₂)
 ... | no  r>r₁ | yes iperf | yes dperf | yes hi≡hd = ⊥-elim (r>r₁ r≤r₁)
 ... | no  r>r₁ | yes iperf | yes dperf | no _ = ⊥-elim (r>r₁ r≤r₁)
 
-
-
 raizMenor-post-insercion-caso2 : ∀ {n r} (i d : AB) → (h-valido : HeapValido (bin i r d)) → (n>r : (n ≤ r -> ⊥)) → 
                                  raizMenorQueHijos (bin (insertar n i) r d)
-raizMenor-post-insercion-caso2 = {!   !}
+raizMenor-post-insercion-caso2 nil nil (heap-bin _ _ _) n>r = >-es-≤ n>r
+raizMenor-post-insercion-caso2 nil (bin i₂ r₂ d₂) (heap-bin _ _ rmqh) n>r = (>-es-≤ n>r , rmqh)
+raizMenor-post-insercion-caso2 {n} {r} (bin i₁ r₁ d₁) nil (heap-bin ival dval rmqh) n>r with
+  n ≤? r₁ | esPerfecto? i₁ | esPerfecto? d₁ | height i₁ ≟ height d₁
+-- Casos yes n≤r₁: raizDe (insertar n i) es n. Goal: r ≤ n
+... | yes n≤r₁ | no ¬iperf | no ¬dperf | _ = >-es-≤ n>r
+... | yes n≤r₁ | yes iperf | no ¬dperf | _ = >-es-≤ n>r
+... | yes n≤r₁ | no ¬iperf | yes dperf | _ = >-es-≤ n>r
+... | yes n≤r₁ | yes iperf | yes dperf | yes hi≡hd  = >-es-≤ n>r
+... | yes n≤r₁ | yes iperf | yes dperf | no hi≡hd+1 = >-es-≤ n>r
+-- Casos no n>r₁: raizDe (insertar n i) es r₁. Goal: r ≤ r₁
+... | no  n>r₁ | yes iperf | no ¬dperf | _ = rmqh
+... | no  n>r₁ | no ¬iperf | yes dperf | _ = rmqh
+... | no  n>r₁ | no ¬iperf | no ¬dperf | _ = rmqh
+... | no  n>r₁ | yes iperf | yes dperf | yes hi≡hd = rmqh
+... | no  n>r₁ | yes iperf | yes dperf | no _ = rmqh
+raizMenor-post-insercion-caso2 {n} {r} (bin i₁ r₁ d₁) (bin i₂ r₂ d₂) (heap-bin ival dval (r≤r₁ , r≤r₂)) n>r with
+  n ≤? r₁ | esPerfecto? i₁ | esPerfecto? d₁ | height i₁ ≟ height d₁
+-- Casos yes n≤r₁: raizDe (insertar n i) es n. Goal: (r ≤ n) × (r ≤ r₂)
+... | yes n≤r₁ | no ¬iperf | no ¬dperf | _ = (>-es-≤ n>r , r≤r₂)
+... | yes n≤r₁ | yes iperf | no ¬dperf | _ = (>-es-≤ n>r , r≤r₂)
+... | yes n≤r₁ | no ¬iperf | yes dperf | _ = (>-es-≤ n>r , r≤r₂)
+... | yes n≤r₁ | yes iperf | yes dperf | yes hi≡hd  = (>-es-≤ n>r , r≤r₂)
+... | yes n≤r₁ | yes iperf | yes dperf | no hi≡hd+1 = (>-es-≤ n>r , r≤r₂)
+-- Casos no n>r₁: raizDe (insertar n i) es r₁. Goal: (r ≤ r₁) × (r ≤ r₂)
+... | no  n>r₁ | yes iperf | no ¬dperf | _ = (r≤r₁ , r≤r₂)
+... | no  n>r₁ | no ¬iperf | yes dperf | _ = (r≤r₁ , r≤r₂)
+... | no  n>r₁ | no ¬iperf | no ¬dperf | _ = (r≤r₁ , r≤r₂)
+... | no  n>r₁ | yes iperf | yes dperf | yes hi≡hd = (r≤r₁ , r≤r₂)
+... | no  n>r₁ | yes iperf | yes dperf | no _ = (r≤r₁ , r≤r₂)
 
 raizMenor-post-insercion-caso3 : ∀ {n r} (i d : AB) → (h-valido : HeapValido (bin i r d)) → (n>r : (n ≤ r -> ⊥)) → 
                                  raizMenorQueHijos (bin i r (insertar n d))
-raizMenor-post-insercion-caso3 = {!   !}
-
-
-raizMenor-post-insercion-caso4 : ∀ {n r} (i d : AB) → (h-valido : HeapValido (bin i r d)) → (n>r : (n ≤ r -> ⊥)) → 
-                                 raizMenorQueHijos (bin i n (insertar r d))
-raizMenor-post-insercion-caso4 = {!   !}
+raizMenor-post-insercion-caso3 nil nil (heap-bin _ _ _) n>r = >-es-≤ n>r
+raizMenor-post-insercion-caso3 {n} {r} nil (bin i₂ r₂ d₂) (heap-bin ival dval rmqh) n>r with
+  n ≤? r₂ | esPerfecto? i₂ | esPerfecto? d₂ | height i₂ ≟ height d₂
+-- Casos yes n≤r₂: raizDe (insertar n d) es n. Goal: r ≤ n
+... | yes n≤r₂ | no ¬iperf | no ¬dperf | _ = >-es-≤ n>r
+... | yes n≤r₂ | yes iperf | no ¬dperf | _ = >-es-≤ n>r
+... | yes n≤r₂ | no ¬iperf | yes dperf | _ = >-es-≤ n>r
+... | yes n≤r₂ | yes iperf | yes dperf | yes hi≡hd  = >-es-≤ n>r
+... | yes n≤r₂ | yes iperf | yes dperf | no hi≡hd+1 = >-es-≤ n>r
+-- Casos no n>r₂: raizDe (insertar n d) es r₂. Goal: r ≤ r₂
+... | no  n>r₂ | yes iperf | no ¬dperf | _ = rmqh
+... | no  n>r₂ | no ¬iperf | yes dperf | _ = rmqh
+... | no  n>r₂ | no ¬iperf | no ¬dperf | _ = rmqh
+... | no  n>r₂ | yes iperf | yes dperf | yes hi≡hd = rmqh
+... | no  n>r₂ | yes iperf | yes dperf | no _ = rmqh
+raizMenor-post-insercion-caso3 (bin i₁ r₁ d₁) nil (heap-bin _ _ rmqh) n>r = (rmqh , >-es-≤ n>r)
+raizMenor-post-insercion-caso3 {n} {r} (bin i₁ r₁ d₁) (bin i₂ r₂ d₂) (heap-bin ival dval (r≤r₁ , r≤r₂)) n>r with
+  n ≤? r₂ | esPerfecto? i₂ | esPerfecto? d₂ | height i₂ ≟ height d₂
+-- Casos yes n≤r₂: raizDe (insertar n d) es n. Goal: (r ≤ r₁) × (r ≤ n)
+... | yes n≤r₂ | no ¬iperf | no ¬dperf | _ = (r≤r₁ , >-es-≤ n>r)
+... | yes n≤r₂ | yes iperf | no ¬dperf | _ = (r≤r₁ , >-es-≤ n>r)
+... | yes n≤r₂ | no ¬iperf | yes dperf | _ = (r≤r₁ , >-es-≤ n>r)
+... | yes n≤r₂ | yes iperf | yes dperf | yes hi≡hd  = (r≤r₁ , >-es-≤ n>r)
+... | yes n≤r₂ | yes iperf | yes dperf | no hi≡hd+1 = (r≤r₁ , >-es-≤ n>r)
+-- Casos no n>r₂: raizDe (insertar n d) es r₂. Goal: (r ≤ r₁) × (r ≤ r₂)
+... | no  n>r₂ | yes iperf | no ¬dperf | _ = (r≤r₁ , r≤r₂)
+... | no  n>r₂ | no ¬iperf | yes dperf | _ = (r≤r₁ , r≤r₂)
+... | no  n>r₂ | no ¬iperf | no ¬dperf | _ = (r≤r₁ , r≤r₂)
+... | no  n>r₂ | yes iperf | yes dperf | yes hi≡hd = (r≤r₁ , r≤r₂)
+... | no  n>r₂ | yes iperf | yes dperf | no _ = (r≤r₁ , r≤r₂)
 
 
 raizMenor-post-insercion-caso5 : ∀ {n r} (i d : AB) → (h-valido : HeapValido (bin i r d)) → (n>r : n ≤ r) → 
                                  raizMenorQueHijos (bin i n (insertar r d))
-raizMenor-post-insercion-caso5 = {!   !}
+raizMenor-post-insercion-caso5 nil nil (heap-bin _ _ _) n>r = n>r
+raizMenor-post-insercion-caso5 {n} {r} nil (bin i₂ r₂ d₂) (heap-bin ival dval rmqh) n>r with
+  r ≤? r₂ | esPerfecto? i₂ | esPerfecto? d₂ | height i₂ ≟ height d₂
+-- Casos yes r≤r₂: raizDe (insertar r d) es r. Goal: n ≤ r
+... | yes r≤r₂ | no ¬iperf | no ¬dperf | _ = n>r
+... | yes r≤r₂ | yes iperf | no ¬dperf | _ = n>r
+... | yes r≤r₂ | no ¬iperf | yes dperf | _ = n>r
+... | yes r≤r₂ | yes iperf | yes dperf | yes hi≡hd  = n>r
+... | yes r≤r₂ | yes iperf | yes dperf | no hi≡hd+1 = n>r
+-- Casos no r>r₂: raizDe (insertar r d) es r₂. Goal: n ≤ r₂
+-- Probamos usando n ≤ r (de n>r) y r ≤ r₂ (de rmqh)
+... | no  r>r₂ | yes iperf | no ¬dperf | _ = ≤-trans n>r rmqh
+... | no  r>r₂ | no ¬iperf | yes dperf | _ = ≤-trans n>r rmqh
+... | no  r>r₂ | no ¬iperf | no ¬dperf | _ = ≤-trans n>r rmqh
+... | no  r>r₂ | yes iperf | yes dperf | yes hi≡hd = ≤-trans n>r rmqh
+... | no  r>r₂ | yes iperf | yes dperf | no _ = ≤-trans n>r rmqh
+raizMenor-post-insercion-caso5 (bin i₁ r₁ d₁) nil (heap-bin _ _ rmqh) n>r = (≤-trans n>r rmqh , n>r)
+
+raizMenor-post-insercion-caso5 {n} {r} (bin i₁ r₁ d₁) (bin i₂ r₂ d₂) (heap-bin ival dval (r≤r₁ , r≤r₂)) n>r with
+  r ≤? r₂ | esPerfecto? i₂ | esPerfecto? d₂ | height i₂ ≟ height d₂
+-- Casos yes r≤r₂: raizDe (insertar r d) es r. Goal: (n ≤ r₁) × (n ≤ r)
+... | yes r≤r₂ | no ¬iperf | no ¬dperf | _ = (≤-trans n>r r≤r₁ , n>r)
+... | yes r≤r₂ | yes iperf | no ¬dperf | _ = (≤-trans n>r r≤r₁ , n>r)
+... | yes r≤r₂ | no ¬iperf | yes dperf | _ = (≤-trans n>r r≤r₁ , n>r)
+... | yes r≤r₂ | yes iperf | yes dperf | yes hi≡hd  = (≤-trans n>r r≤r₁ , n>r)
+... | yes r≤r₂ | yes iperf | yes dperf | no hi≡hd+1 = (≤-trans n>r r≤r₁ , n>r)
+-- Casos no r>r₂: raizDe (insertar r d) es r₂. Goal: (n ≤ r₁) × (n ≤ r₂)
+... | no  r>r₂ | yes iperf | no ¬dperf | _ = (≤-trans n>r r≤r₁ , ≤-trans n>r r≤r₂)
+... | no  r>r₂ | no ¬iperf | yes dperf | _ = (≤-trans n>r r≤r₁ , ≤-trans n>r r≤r₂)
+... | no  r>r₂ | no ¬iperf | no ¬dperf | _ = (≤-trans n>r r≤r₁ , ≤-trans n>r r≤r₂)
+... | no  r>r₂ | yes iperf | yes dperf | yes hi≡hd = (≤-trans n>r r≤r₁ , ≤-trans n>r r≤r₂)
+... | no  r>r₂ | yes iperf | yes dperf | no _ = (≤-trans n>r r≤r₁ , ≤-trans n>r r≤r₂)
+
+
 
 insertar-preserva-validez : ∀ {a n} -> Heap a -> HeapValido (insertar n a)
 insertar-preserva-validez {nil} h = heap-bin heap-nil heap-nil tt 
@@ -467,15 +551,15 @@ insertar-preserva-validez {bin i r d} {n} h = casesplit
     casesplit : HeapValido (insertar n (bin i r d))
     casesplit with n ≤? r | esPerfecto? i | esPerfecto? d | height i ≟ height d
     ... | yes n≤r | yes iperf | yes dperf | yes _ = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso1 i d hval n≤r)
+    ... | no  n>r | yes iperf | yes dperf | yes _ = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso2 i d hval n>r)
+    ... | yes n≤r | no ¬iperf | yes dperf | _     = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso1 i d hval n≤r)
+    ... | no  n>r | no ¬iperf | yes dperf | _     = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso2 i d hval n>r)
+    ... | yes n≤r | no ¬iperf | no ¬dperf | _     = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso1 i d hval n≤r)
+    ... | no  n>r | no ¬iperf | no ¬dperf | _     = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso2 i d hval n>r)
+
     ... | yes n≤r | yes iperf | yes dperf | no  _ = heap-bin ival (insertar-preserva-validez dheap) (raizMenor-post-insercion-caso5 i d hval n≤r)
     ... | yes n≤r | yes iperf | no ¬dperf | _     = heap-bin ival (insertar-preserva-validez dheap) (raizMenor-post-insercion-caso5 i d hval n≤r)
-    ... | yes n≤r | no ¬iperf | yes dperf | _     = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso1 i d hval n≤r)
-    ... | yes n≤r | no ¬iperf | no ¬dperf | _     = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso1 i d hval n≤r)
-
     ... | no  n>r | yes iperf | no ¬dperf | _     = heap-bin ival (insertar-preserva-validez dheap) (raizMenor-post-insercion-caso3 i d hval n>r)
-    ... | no  n>r | no ¬iperf | yes dperf | _     = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso2 i d hval n>r)
-    ... | no  n>r | no ¬iperf | no ¬dperf | _     = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso2 i d hval n>r)
-    ... | no  n>r | yes iperf | yes dperf | yes _ = heap-bin (insertar-preserva-validez iheap) dval (raizMenor-post-insercion-caso2 i d hval n>r)
     ... | no  n>r | yes iperf | yes dperf | no  _ = heap-bin ival (insertar-preserva-validez dheap) (raizMenor-post-insercion-caso3 i d hval n>r)
 
 insertar-preserva-invariante : ∀ {h n} -> Heap h -> Heap (insertar n h)
