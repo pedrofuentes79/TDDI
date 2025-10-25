@@ -12,7 +12,6 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq.≡-Reasoning
 open import Relation.Binary.PropositionalEquality using (subst)
 
-
 --auxiliares 
 absurdo₁ : {a b : ℕ} -> a ≡ b -> a ≡ suc b -> ⊥
 absurdo₁ refl ()
@@ -218,11 +217,50 @@ hijo-der : AB -> AB
 hijo-der nil = nil
 hijo-der (bin i r d) = d
 
+si-difieren-en-altura-i-es-d+1 : ∀ {i r d} -> esCompleto (bin i r d) -> (height i ≡ height d -> ⊥) -> height i ≡ suc (height d)
+si-difieren-en-altura-i-es-d+1 (inj₁ (hi≡hd , _ , _)) hi≠hd = ⊥-elim (hi≠hd hi≡hd)
+si-difieren-en-altura-i-es-d+1 (inj₂ (hi≡hd+1 , _ , _)) hi≠hd = hi≡hd+1
+
 
 insertar-en-perf-aumenta-altura : ∀ {a n} -> esPerfecto a -> height (insertar n a) ≡ suc (height a)
 insertar-en-perf-aumenta-altura {nil}       perf = refl
-insertar-en-perf-aumenta-altura {bin i r d} {k} (hi≡hd , iperf , dperf) = {!   !}
-
+insertar-en-perf-aumenta-altura {bin i₁ r₁ d₁} {r} (hi≡hd , iperf , dperf) 
+-- Tengo que preguntar esPerfecto? i₁ , esPerfecto? d₁ porque si no, no unifica insertar :D
+  with r ≤? r₁ | esPerfecto? i₁ | esPerfecto? d₁ | height i₁ ≟ height d₁
+-- ABSURDOS: se que vale iperf y dperf
+... | _        | no ¬iperf | _         | _         = ⊥-elim (¬iperf iperf)
+... | _        | _         | no ¬dperf | _         = ⊥-elim (¬dperf dperf)
+-- ABSURDO: se que hi≡hd
+... | _        | _         | _         | no  hi≠hd = ⊥-elim (hi≠hd hi≡hd)
+... | yes r≤r₁ | yes iperf | yes dperf | yes hi≡hd = cong suc (
+      begin
+        height (insertar r₁ i₁) ⊔ height d₁
+      ≡⟨ cong (_⊔ height d₁) (insertar-en-perf-aumenta-altura iperf) ⟩ 
+        suc (height i₁) ⊔ height d₁
+      ≡⟨ cong (suc (height i₁) ⊔_) (sym hi≡hd) ⟩
+        suc (height i₁) ⊔ height i₁
+      ≡⟨ trans (⊔-comm (suc (height i₁)) (height i₁)) (m≤n⇒m⊔n≡n (n≤1+n (height i₁))) ⟩
+        suc (height i₁)
+      ≡⟨ cong suc (sym (⊔-idem (height i₁))) ⟩
+        suc (height i₁ ⊔ height i₁)
+      ≡⟨ cong suc (cong (height i₁ ⊔_) hi≡hd) ⟩
+        suc (height i₁ ⊔ height d₁)
+      ∎)
+-- La misma demo, pero con r en vez de r₁
+... | no  r>r₁ | yes iperf | yes dperf | yes hi≡hd = cong suc (
+      begin
+        height (insertar r i₁) ⊔ height d₁
+      ≡⟨ cong (_⊔ height d₁) (insertar-en-perf-aumenta-altura iperf) ⟩ 
+        suc (height i₁) ⊔ height d₁
+      ≡⟨ cong (suc (height i₁) ⊔_) (sym hi≡hd) ⟩
+        suc (height i₁) ⊔ height i₁
+      ≡⟨ trans (⊔-comm (suc (height i₁)) (height i₁)) (m≤n⇒m⊔n≡n (n≤1+n (height i₁))) ⟩
+        suc (height i₁)
+      ≡⟨ cong suc (sym (⊔-idem (height i₁))) ⟩
+        suc (height i₁ ⊔ height i₁)
+      ≡⟨ cong suc (cong (height i₁ ⊔_) hi≡hd) ⟩
+        suc (height i₁ ⊔ height d₁)
+      ∎)
 
 insertar-en-¬perf-mantiene-altura : ∀ {a n} -> esCompleto a -> (esPerfecto a -> ⊥) -> height (insertar n a) ≡ height a
 insertar-en-¬perf-mantiene-altura {nil} _ ¬perf = ⊥-elim (¬perf tt)
@@ -233,19 +271,50 @@ insertar-en-¬perf-mantiene-altura {bin i₁ r₁ d₁} {r} comp ¬perf
 -- ABS: alguno de los dos debe ser perfecto
 ... | _ | no ¬iperf | no ¬dperf | _ = ⊥-elim (heap-completo-alguno-de-sus-hijos-es-perfecto {r = r₁} comp ¬iperf ¬dperf)
 -- Caso: ambos perfectos pero distinta altura → insertamos en d₁
-... | yes r≤r₁ | yes iperf | yes dperf | no  hi≠hd = cong suc ({!   !})
+... | yes r≤r₁ | yes iperf | yes dperf | no  hi≠hd = cong suc (
+    begin
+      height i₁ ⊔ height (insertar r₁ d₁)
+    ≡⟨ cong (λ z -> z ⊔ height (insertar r₁ d₁)) (si-difieren-en-altura-i-es-d+1 {r = r₁} comp (hi≠hd)) ⟩ 
+      suc (height d₁) ⊔ height (insertar r₁ d₁)
+    ≡⟨ cong (λ z -> suc (height d₁) ⊔ z) (insertar-en-perf-aumenta-altura dperf) ⟩ 
+      suc (height d₁) ⊔ suc (height d₁) 
+    ≡⟨ ⊔-idem (suc (height d₁)) ⟩ 
+      suc (height d₁)
+    ≡⟨ sym (trans (⊔-comm (suc (height d₁)) (height d₁)) (m≤n⇒m⊔n≡n (n≤1+n (height d₁)))) ⟩ 
+      suc (height d₁) ⊔ height d₁
+    ≡⟨ cong (_⊔ height d₁) (sym (si-difieren-en-altura-i-es-d+1 {r = r₁} comp (hi≠hd))) ⟩ 
+      height i₁ ⊔ height d₁
+    ∎)
+-- Literal la misma demo que arriba pero con r en vez de r₁. Se podria extraer el lema y parametrizarla... en otra vida
+... | no r>r₁ | yes iperf | yes dperf | no  hi≠hd = cong suc (
+    begin
+      height i₁ ⊔ height (insertar r d₁)
+    ≡⟨ cong (λ z -> z ⊔ height (insertar r d₁)) (si-difieren-en-altura-i-es-d+1 {r = r} comp (hi≠hd)) ⟩ 
+      suc (height d₁) ⊔ height (insertar r d₁)
+    ≡⟨ cong (λ z -> suc (height d₁) ⊔ z) (insertar-en-perf-aumenta-altura dperf) ⟩ 
+      suc (height d₁) ⊔ suc (height d₁) 
+    ≡⟨ ⊔-idem (suc (height d₁)) ⟩ 
+      suc (height d₁)
+    ≡⟨ sym (trans (⊔-comm (suc (height d₁)) (height d₁)) (m≤n⇒m⊔n≡n (n≤1+n (height d₁)))) ⟩ 
+      suc (height d₁) ⊔ height d₁
+    ≡⟨ cong (_⊔ height d₁) (sym (si-difieren-en-altura-i-es-d+1 {r = r} comp (hi≠hd))) ⟩ 
+      height i₁ ⊔ height d₁
+    ∎)
 -- Caso: i perfecto, d no perfecto → insertamos en d₁
-... | yes r≤r₁ | yes iperf | no ¬dperf | _  = {!   !}
--- Caso: i no perfecto → insertamos en i₁
-  --rewrite insertar-en-¬perf-mantiene-altura {n = r₁} ¬iperf = ?
-... | yes r≤r₁ | no ¬iperf | yes dperf | _ = {!   !}
--- Caso: r > r₁, ambos perfectos pero distinta altura → insertamos en d₁
-... | no r>r₁ | yes iperf | yes dperf | no  hi≠hd 
-  rewrite insertar-en-perf-aumenta-altura {n = r} dperf = {!   !}
+... | yes r≤r₁ | yes iperf | no ¬dperf | _ = cong suc (
+    begin
+      height i₁ ⊔ height (insertar r₁ d₁)
+    ≡⟨ cong (λ z -> height i₁ ⊔ z) (insertar-en-¬perf-mantiene-altura (heap-completo-su-hijo-der-es-completo (completo-bin (bin i₁ r₁ d₁) comp)) ¬dperf) ⟩
+      height i₁ ⊔ height d₁
+    ∎)
 -- Caso: r > r₁, i perfecto, d no perfecto → insertamos en d₁
-... | no r>r₁ | yes iperf | no ¬dperf | _ = {!   !}
--- Caso: r > r₁, i no perfecto → insertamos en i₁
-... | no r>r₁ | no ¬iperf | _ | _ = {!   !}
+-- Demo analoga a la de arriba, la pongo inline para que moleste menos
+... | no r>r₁ | yes iperf | no ¬dperf | _ = cong suc (cong (λ z -> height i₁ ⊔ z) (insertar-en-¬perf-mantiene-altura (heap-completo-su-hijo-der-es-completo (completo-bin (bin i₁ r₁ d₁) comp)) ¬dperf))
+-- Caso: i no perfecto → insertamos en i₁
+-- Demo analoga, solo que pidiendo mantener altura en i₁
+... | yes r≤r₁ | no ¬iperf | yes dperf | _ = cong suc (cong (_⊔ height d₁) (insertar-en-¬perf-mantiene-altura (heap-completo-su-hijo-izq-es-completo (completo-bin (bin i₁ r₁ d₁) comp)) ¬iperf))
+-- Misma demo.
+... | no  r>r₁ | no ¬iperf | yes dperf | _ = cong suc (cong (_⊔ height d₁) (insertar-en-¬perf-mantiene-altura (heap-completo-su-hijo-izq-es-completo (completo-bin (bin i₁ r₁ d₁) comp)) ¬iperf))
 
 es-nil-es-valido : ∀ {i} -> esNil i -> HeapValido i
 es-nil-es-valido {nil} esnil = heap-nil
@@ -284,9 +353,13 @@ hijo-der-nil-de-altura-1 {nil} {r} {bin i₂ r₂ d₂} ()
 hijo-der-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {nil} ()
 hijo-der-nil-de-altura-1 {bin i₁ r₁ d₁} {r} {bin i₂ r₂ d₂} ()
 
-si-difieren-en-altura-i-es-d+1 : ∀ {i r d} -> esCompleto (bin i r d) -> (height i ≡ height d -> ⊥) -> height i ≡ suc (height d)
-si-difieren-en-altura-i-es-d+1 (inj₁ (hi≡hd , _ , _)) hi≠hd = ⊥-elim (hi≠hd hi≡hd)
-si-difieren-en-altura-i-es-d+1 (inj₂ (hi≡hd+1 , _ , _)) hi≠hd = hi≡hd+1
+completo-hi≠hd-implica-dperf : ∀ {i r d} -> esCompleto (bin i r d) -> (height i ≡ height d → ⊥) -> esPerfecto d
+completo-hi≠hd-implica-dperf (inj₁ (hi≡hd , _ , _))     hi≠hd = ⊥-elim (hi≠hd hi≡hd)
+completo-hi≠hd-implica-dperf (inj₂ (_ , _ , dperf))     hi≠hd = dperf
+
+completo-hi≡hd-implica-iperf : ∀ {i r d} -> esCompleto (bin i r d) -> (height i ≡ height d) -> esPerfecto i
+completo-hi≡hd-implica-iperf (inj₁ (_ , iperf , _))     hi≡hd = iperf
+completo-hi≡hd-implica-iperf (inj₂ (hi≡shd , _ , _))    hi≡hd = ⊥-elim (absurdo₁ hi≡hd hi≡shd)
 
 insertar-preserva-completo : ∀ {a n} -> Heap a -> esCompleto (insertar n a)
 insertar-preserva-completo {nil} {n} h = inj₁ (refl , tt , tt) 
@@ -308,13 +381,14 @@ insertar-preserva-completo {bin i r d} {n} h = casesplit
     casesplit with n ≤? r | esPerfecto? i | esPerfecto? d | height i ≟ height d
     -- absurdo, alguno de los dos deberia ser perfecto
     ... | _        | no ¬iperf | no ¬dperf | _         = ⊥-elim (heap-completo-alguno-de-sus-hijos-es-perfecto {i} {r} {d} todocomp ¬iperf ¬dperf)
-    ... | yes r≤r₁ | yes iperf | no ¬dperf | yes hi≡hd = inj₁ ({!   !} , iperf , (insertar-preserva-completo dheap))
-    ... | yes r≤r₁ | yes iperf | no ¬dperf | no  hi≠hd = inj₁ ({!   !} , iperf , (insertar-preserva-completo dheap))
-    ... | no  r>r₁ | yes iperf | no ¬dperf | _         = inj₁ ({!   !} , iperf , (insertar-preserva-completo dheap))
+    -- absurdo. No pueden tener alturas distintas y que d no sea perfecto
+    ... | _        | yes iperf | no ¬dperf | no  hi≠hd = ⊥-elim (¬dperf (completo-hi≠hd-implica-dperf {r = r} todocomp hi≠hd))
+    -- este caso es absurdo. No puede ser que ¬iperf, dperf y hi≡hd
+    ... | _        | no ¬iperf | yes dperf | yes hi≡hd = ⊥-elim (¬iperf (completo-hi≡hd-implica-iperf {r = r} todocomp hi≡hd))
+    ... | yes r≤r₁ | yes iperf | no ¬dperf | yes hi≡hd = inj₁ (trans hi≡hd (sym (insertar-en-¬perf-mantiene-altura dcomp ¬dperf)) , iperf , (insertar-preserva-completo dheap))
+    ... | no  r>r₁ | yes iperf | no ¬dperf | yes hi≡hd = inj₁ (trans hi≡hd (sym (insertar-en-¬perf-mantiene-altura dcomp ¬dperf)) , iperf , (insertar-preserva-completo dheap))
     ... | yes r≤r₁ | yes iperf | yes dperf | yes hi≡hd = inj₂ (trans (insertar-en-perf-aumenta-altura iperf) (cong suc hi≡hd) , (insertar-preserva-completo iheap) , dperf)
     ... | yes r≤r₁ | yes iperf | yes dperf | no  hi≠hd = inj₁ (trans (si-difieren-en-altura-i-es-d+1 {r = r} todocomp hi≠hd) (sym (insertar-en-perf-aumenta-altura dperf)) , iperf , (insertar-preserva-completo dheap))
-    -- este caso es absurdo. No puede ser que ¬iperf, dperf y hi≡hd
-    ... | _        | no ¬iperf | yes dperf | yes hi≡hd = ⊥-elim {!   !}
     ... | yes r≤r₁ | no ¬iperf | yes dperf | no  hi≠hd = inj₂ (trans (insertar-en-¬perf-mantiene-altura icomp ¬iperf) (si-difieren-en-altura-i-es-d+1 {r = r} todocomp hi≠hd) , (insertar-preserva-completo iheap) , dperf)
     ... | no  r>r₁ | no ¬iperf | yes dperf | no  hi≠hd = inj₂ (trans (insertar-en-¬perf-mantiene-altura icomp ¬iperf) (si-difieren-en-altura-i-es-d+1 {r = n} todocomp hi≠hd) , (insertar-preserva-completo iheap) , dperf)
     ... | no  r>r₁ | yes iperf | yes dperf | yes hi≡hd = inj₂ (trans (insertar-en-perf-aumenta-altura iperf) (cong suc hi≡hd) , (insertar-preserva-completo iheap) , dperf)
