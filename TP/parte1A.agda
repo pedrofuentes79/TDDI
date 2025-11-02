@@ -91,7 +91,10 @@ Inclusion Γ Δ = {A : Form} → Γ ∋ A → Δ ∋ A
 extender-inclusion : {Γ Δ : Ctx} {A : Form}
                    → Inclusion Γ Δ
                    → Inclusion (Γ , A) (Δ , A)
-extender-inclusion Γ∋Δ = {!!}
+extender-inclusion Γ∋Δ pr with pr
+... | zero    = zero
+... | suc Γ∋A = suc (Γ∋Δ Γ∋A)
+
 
 -- [Ejercicio 2]
 -- Demostrar la siguiente propiedad de debilitamiento (o weakening),
