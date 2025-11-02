@@ -119,12 +119,12 @@ debilitamiento incl (DNEG p)    = DNEG (debilitamiento incl p)
 wk : {Γ : Ctx} {A B : Form}
    → Γ ⊢ A
    → Γ , B ⊢ A
-wk = debilitamiento {!   !}
+wk = debilitamiento suc
 
 wk1 : {Γ : Ctx} {A B C : Form}
     → Γ , C ⊢ A
     → Γ , B , C ⊢ A
-wk1 = debilitamiento {!   !}
+wk1 = debilitamiento (extender-inclusion suc)
 
 -- [Ejercicio 3]
 -- Demostrar el siguiente lema de sustitución.
