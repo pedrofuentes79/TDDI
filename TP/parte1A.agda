@@ -249,6 +249,15 @@ esSecuenteValido Γ A = ((v : Valuacion) → satisface v Γ A)
 
 ---- Corrección de la deducción natural ----
 
+-- Lema: Si satisface un contexto Γ y satisface una fórmula A,
+-- luego satisface al contexto extendido Γ , A
+satisface-Ctx-Extendido :
+    {v : Valuacion} {Γ : Ctx} {A : Form} →
+    satisface-Ctx v Γ → satisface-Form v A → satisface-Ctx v (Γ , A)
+satisface-Ctx-Extendido satisfaceCtx satisfaceA inclusionDeAEnGamma with inclusionDeAEnGamma
+... | zero = satisfaceA
+... | suc Γ = satisfaceCtx Γ
+
 -- [Ejercicio 6]
 -- Demostrar que el sistema de deducción natural clásico es correcto
 -- con respecto a la semántica bivaluada.
