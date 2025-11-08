@@ -264,4 +264,16 @@ satisface-Ctx-Extendido satisfaceCtx satisfaceA inclusionDeAEnGamma with inclusi
 deduccion-natural-correcta : {Γ : Ctx} {A : Form}
                            → Γ ⊢ A
                            → esSecuenteValido Γ A
-deduccion-natural-correcta = {!   !}
+deduccion-natural-correcta (AX inclusionDeAEnGamma) v satΓ  = satΓ inclusionDeAEnGamma
+deduccion-natural-correcta (FALSE-e p)  v   = {!   !}
+deduccion-natural-correcta (IMP-i p)    v satΓ = 
+  -- Produce satisface-Form v (IMP A B)
+  λ satA →
+    let
+      satΓA = satisface-Ctx-Extendido satΓ satA
+      satB  = deduccion-natural-correcta p v satΓA
+    in
+      -- Implicación material (?)
+      {!   !} -- imp satA satB
+deduccion-natural-correcta (IMP-e p q)  v   = {!   !}
+deduccion-natural-correcta (DNEG p)     v   = {!   !}
