@@ -1,7 +1,9 @@
 open import Data.String using (String)
 open import Data.Bool using (Bool; true; false)
-open import Relation.Binary.PropositionalEquality using (_≡_;refl)
+open import Relation.Binary.PropositionalEquality using (_≡_; refl; inspect; [_])
 open import Data.Empty using (⊥; ⊥-elim)
+open import Relation.Nullary using (Dec; yes; no)
+
 
 
 infix  60 _⊢_ _∋_
@@ -259,6 +261,11 @@ satisface-Ctx-Extendido satisfaceCtx satisfaceA inclusionDeAEnGamma with inclusi
 ... | zero = satisfaceA
 ... | suc Γ = satisfaceCtx Γ
 
+
+isTrue : (b : Bool) → Dec (b ≡ true)
+isTrue true  = yes refl
+isTrue false = no λ ()
+
 -- [Ejercicio 6]
 -- Demostrar que el sistema de deducción natural clásico es correcto
 -- con respecto a la semántica bivaluada.
@@ -267,10 +274,19 @@ deduccion-natural-correcta : {Γ : Ctx} {A : Form}
                            → esSecuenteValido Γ A
 deduccion-natural-correcta (AX inclusionDeAEnGamma) v satΓ  = satΓ inclusionDeAEnGamma
 deduccion-natural-correcta (FALSE-e p)  v   satΓ with (deduccion-natural-correcta p v satΓ)
-... | () 
-deduccion-natural-correcta (IMP-i {A = A} {B = B} p) v satΓ with valor-Form v A
-... | false = refl
-... | true  = deduccion-natural-correcta p v (satisface-Ctx-Extendido satΓ {!   !})
-deduccion-natural-correcta (IMP-e {A = A} {B = B} p q)  v satΓ = {!   !}
-deduccion-natural-correcta (DNEG p) v satΓ with deduccion-natural-correcta p v satΓ
-... | k = {!   !}
+... | ()
+
+deduccion-natural-correcta (IMP-i {A = A} {B = B} p) v satΓ with valor-Form v A | inspect (valor-Form v) A
+... | false | _ = refl
+... | true  | [ eq ] = deduccion-natural-correcta p v (satisface-Ctx-Extendido satΓ eq)
+
+deduccion-natural-correcta (IMP-e {A = A} {B = B} p q)  v satΓ with valor-Form v A | deduccion-natural-correcta q v satΓ | deduccion-natural-correcta p v satΓ
+... | false | () | impAB
+... | true  | satA | impAB = impAB
+
+
+deduccion-natural-correcta (DNEG {A = A} p) v satΓ with deduccion-natural-correcta p v satΓ
+... | k with valor-Form v A
+deduccion-natural-correcta (DNEG {A = A} p) v satΓ | k | false with k
+... | ()
+deduccion-natural-correcta (DNEG {A = A} p) v satΓ | k | true = refl
