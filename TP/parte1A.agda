@@ -257,9 +257,9 @@ esSecuenteValido Γ A = ((v : Valuacion) → satisface v Γ A)
 satisface-Ctx-Extendido :
     {v : Valuacion} {Γ : Ctx} {A : Form} →
     satisface-Ctx v Γ → satisface-Form v A → satisface-Ctx v (Γ , A)
-satisface-Ctx-Extendido satisfaceCtx satisfaceA inclusionDeAEnGamma with inclusionDeAEnGamma
-... | zero = satisfaceA
-... | suc Γ = satisfaceCtx Γ
+satisface-Ctx-Extendido satisfaceGamma satisfaceA inclusionDeBEnGamma with inclusionDeBEnGamma
+... | zero = satisfaceA -- B = A
+... | suc Γ∋B = satisfaceGamma Γ∋B -- B ≠ A y está en Γ
 
 
 isTrue : (b : Bool) → Dec (b ≡ true)
