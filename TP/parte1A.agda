@@ -1,6 +1,7 @@
 open import Data.String using (String)
 open import Data.Bool using (Bool; true; false)
-open import Relation.Binary.PropositionalEquality using (_≡_)
+open import Relation.Binary.PropositionalEquality using (_≡_;refl)
+open import Data.Empty using (⊥; ⊥-elim)
 
 
 infix  60 _⊢_ _∋_
@@ -265,15 +266,11 @@ deduccion-natural-correcta : {Γ : Ctx} {A : Form}
                            → Γ ⊢ A
                            → esSecuenteValido Γ A
 deduccion-natural-correcta (AX inclusionDeAEnGamma) v satΓ  = satΓ inclusionDeAEnGamma
-deduccion-natural-correcta (FALSE-e p)  v   = {!   !}
-deduccion-natural-correcta (IMP-i p)    v satΓ = 
-  -- Produce satisface-Form v (IMP A B)
-  λ satA →
-    let
-      satΓA = satisface-Ctx-Extendido satΓ satA
-      satB  = deduccion-natural-correcta p v satΓA
-    in
-      -- Implicación material (?)
-      {!   !} -- imp satA satB
-deduccion-natural-correcta (IMP-e p q)  v   = {!   !}
-deduccion-natural-correcta (DNEG p)     v   = {!   !}
+deduccion-natural-correcta (FALSE-e p)  v   satΓ with (deduccion-natural-correcta p v satΓ)
+... | () 
+deduccion-natural-correcta (IMP-i {A = A} {B = B} p) v satΓ with valor-Form v A
+... | false = refl
+... | true  = deduccion-natural-correcta p v (satisface-Ctx-Extendido satΓ {!   !})
+deduccion-natural-correcta (IMP-e {A = A} {B = B} p q)  v satΓ = {!   !}
+deduccion-natural-correcta (DNEG p) v satΓ with deduccion-natural-correcta p v satΓ
+... | k = {!   !}
