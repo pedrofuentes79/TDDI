@@ -288,6 +288,4 @@ deduccion-natural-correcta (IMP-e {A = A} {B = B} p q)  v satΓ with valor-Form 
 
 deduccion-natural-correcta (DNEG {A = A} p) v satΓ with deduccion-natural-correcta p v satΓ
 ... | k with valor-Form v A
-deduccion-natural-correcta (DNEG {A = A} p) v satΓ | k | false with k
-... | ()
-deduccion-natural-correcta (DNEG {A = A} p) v satΓ | k | true = refl
+... | true = refl
