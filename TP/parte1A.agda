@@ -277,13 +277,14 @@ deduccion-natural-correcta (FALSE-e p)  v   satΓ with (deduccion-natural-correc
 ... | ()
 
 deduccion-natural-correcta (IMP-i {A = A} {B = B} p) v satΓ with valor-Form v A | inspect (valor-Form v) A
+-- Usamos inspect para poder acceder a la prueba de que (valor-Form v A) es true
+-- si en vez de poner "eq" ponemos "refl", agda no lo unifica.
 ... | false | _ = refl
 ... | true  | [ eq ] = deduccion-natural-correcta p v (satisface-Ctx-Extendido satΓ eq)
 
 deduccion-natural-correcta (IMP-e {A = A} {B = B} p q)  v satΓ with valor-Form v A | deduccion-natural-correcta q v satΓ | deduccion-natural-correcta p v satΓ
 ... | false | () | impAB
 ... | true  | satA | impAB = impAB
-
 
 deduccion-natural-correcta (DNEG {A = A} p) v satΓ with deduccion-natural-correcta p v satΓ
 ... | k with valor-Form v A
