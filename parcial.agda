@@ -19,7 +19,6 @@ _++_ : Word -> Word -> Word
 []       ++ w2 = w2
 cons0 w1 ++ w2 = cons0 (w1 ++ w2)
 cons1 w1 ++ w2 = cons1 (w1 ++ w2)
-==
 -- El siguiente tipo de datos sirve para representar expresiones regulares en el alfabeto {0, 1}.
 -- [Nota: el símbolo "∙" típicamente se puede ingresar tecleando "\."].
 data RE : Set where
@@ -57,7 +56,9 @@ data Match : RE → Word → Set where
 -- Ejercicio 1: demostrar que la expresión regular (m0 U m1)* matchea a cualquier palabra.
 -- Sugerencia: proceder por inducción en w.
 lenguaje-completo : {w : Word} → Match ((m0 U m1) *) w
-lenguaje-completo {w} = {!   !}
+lenguaje-completo {[]} = Match-*1
+lenguaje-completo {cons0 w} = Match-*2 (Match-U1 Match-0) (lenguaje-completo {w})
+lenguaje-completo {cons1 w} = Match-*2 (Match-U2 Match-1) (lenguaje-completo {w})
 
 ---
 
