@@ -107,8 +107,8 @@ U-assoc w = (λ { (Match-U1 (Match-U1 p)) -> Match-U1 p
           })
 
 U-neut : {R : RE} → R U ∅ ~ R
-U-neut w = (λ { (Match-U1 p) → p
-              ; (Match-U2 ())
+U-neut w = (λ { (Match-U1 p) -> p
+              ; (Match-U2 ()) -- pues no es posible que esté en vacío
               })
          , (λ matchR -> Match-U1 matchR)
 
@@ -205,7 +205,7 @@ reverse-++ (cons1 w1) w2 = begin
   ∎
 
 -- Lema: podemos extender un match de R* 
-extender-match-R* : {R : RE} {w1 w2 : Word} → Match (R *) w1 → Match R w2 → Match (R *) (w1 ++ w2)
+extender-match-R* : {R : RE} {w1 w2 : Word} -> Match (R *) w1 -> Match R w2 -> Match (R *) (w1 ++ w2)
 -- Se queja si no pongo el "."
 -- Hacemos inducción sobre "Match (R *) w1"; cuando es la palabra vacía y cuando es concatenación
 extender-match-R* {R} {w1 = .[]} {w2} Match-*1 p = 
